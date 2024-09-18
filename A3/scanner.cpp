@@ -37,7 +37,7 @@ bool port_is_open(const std::string &addr, int port)
 
     char buffer[1];
     int attempts = 0;
-    int max_retries = 2;
+    int max_retries = 5;
 
     while (attempts < max_retries)
     {

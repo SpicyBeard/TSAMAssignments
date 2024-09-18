@@ -199,7 +199,6 @@ std::pair<int, int> solve_secret_port(const std::string &addr, int port)
 }
 
 bool solve_other_port(const std::string &addr, int port, uint32_t secret)
-// Send me a 4-byte message containing the signature you got from S.E.C.R.E.T in the first 4 bytes (in network byte order).
 {
     std::pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
     int sockfd = connection.first;
@@ -213,17 +212,12 @@ bool solve_other_port(const std::string &addr, int port, uint32_t secret)
 
     int attempts = 0;
     int max_retries = 5;
-    uint32_t message = 0x0000;
-    // std::cout << "message: " << message << std::endl;
-    message = htonl(secret);
-    // std::cout << "message: " << message << std::endl;
-    // std::cout << sizeof(message) << std::endl;
-    // std::cout << "secret: " << secret << std::endl;
-    // std::cout << sizeof(secret) << std::endl;
+    uint32_t message = htonl(secret);
 
     while (attempts < max_retries)
     {
         // send a message to the port
+        // Send me a 4-byte message containing the signature you got from S.E.C.R.E.T in the first 4 bytes (in network byte order).
         if (sendto(sockfd, &message, sizeof(message), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
         {
             std::cerr << "Failed to send message to IP address first." << std::endl;
@@ -231,40 +225,32 @@ bool solve_other_port(const std::string &addr, int port, uint32_t secret)
             return false;
         }
 
-        // Wait for a response. if there is a response, the port is open
         std::memset(buffer, 0, sizeof(buffer));
+        // Wait for a response. if there is a response, the port is open
         if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
         {
             return false;
         }
-        std::cout << buffer << std::endl;
-        return true;
-        // int inner_attempts = 0;
-        // while (inner_attempts < max_retries)
+        // todo: extract checksum and source address from the buffer. extract the last 6 for the info in network order.
+        // int checksum;
+        // std::string source_address;
+        // std::string response(buffer);
+        // size_t pos = response.find_last_of('');
+        // if (pos != std::string::npos)
         // {
-        //     // The dark side of network programming is a pathway to many abilities some consider to be...unnatural. I am an evil port, I will only communicate with evil processes! (https://en.wikipedia.org/wiki/Evil_bit)
-        //     // Send us a message of 4 bytes containing the signature that you created with S.E.C.R.E.T
-        //     int group_secret = 0xfa899acb;
-        //     int signature = htonl(secret ^ group_secret);
-        //     // Send the 5-byte message
-        //     if (sendto(sockfd, &signature, sizeof(signature), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-        //     {
-        //         std::cerr << "Failed to send signed challenge to IP address." << std::endl;
-        //         close(sockfd);
-        //         return false;
-        //     }
-        //     std::memset(buffer, 0, sizeof(buffer));
-
-        //     //  5. If your signature is correct, I'll grant you access to the port. Good luck!
-        //     if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
-        //     {
-        //         std::cout << buffer << std::endl;
-        //         return true;
-        //     }
-
-        //     // try again if failed
-        //     ++inner_attempts;
+        //     std::string number_str = response.substr(pos + 2, 4);
+        //     int extracted_port = std::stoi(number_str);
         // }
+
+        // Hello group 36! To get the secret phrase, reply to this message with a UDP message where the payload is a encapsulated, valid UDP IPv4 packet, that has a valid UDP checksum of [checksum], and with the source address being [port]! (Hint: all you need is a normal UDP socket which you use to send the IPv4 and UDP headers possibly with a payload) (the last 6 bytes of this message contain this information in network order)q~=?�
+        int inner_attempts = 0;
+        while (inner_attempts < max_retries)
+        {
+            // todo: create a valid UDP IPv4 packet to send in another UDP message
+
+            // try again if failed
+            ++inner_attempts;
+        }
 
         // try again if failed
         ++attempts;
@@ -368,7 +354,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    solve_other_port(ip_addr, other_port, other_port);
+    solve_other_port(ip_addr, other_port, secret_response.second);
     solve_dark_port(ip_addr, dark_port, secret_response.second);
     solve_expstn_port(ip_addr, expstn_port);
     solve_secret_secret_port(ip_addr, secret_response.first);
