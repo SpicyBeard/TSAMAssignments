@@ -96,7 +96,7 @@ std::string sort_port(std::string portmsg)
     }
     else
     {
-        return "other";
+        return "checksum";
     }
 }
 
@@ -198,7 +198,7 @@ std::pair<int, int> solve_secret_port(const std::string &addr, int port)
     return std::make_pair(-1, -1);
 }
 
-bool solve_other_port(const std::string &addr, int port, uint32_t secret)
+bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
 {
     std::pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
     int sockfd = connection.first;
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
     int port3 = atoi(argv[4]);
     int port4 = atoi(argv[5]);
 
-    int secret_port, dark_port, other_port, expstn_port;
+    int secret_port, dark_port, checksum_port, expstn_port;
 
     auto port1_result = check_and_sort_port(ip_addr, port1);
     auto port2_result = check_and_sort_port(ip_addr, port2);
@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
     else if (port1_result.first == "expstn")
         expstn_port = port1_result.second;
     else
-        other_port = port1_result.second;
+        checksum_port = port1_result.second;
 
     if (port2_result.first == "secret")
         secret_port = port2_result.second;
@@ -339,7 +339,7 @@ int main(int argc, char *argv[])
     else if (port2_result.first == "expstn")
         expstn_port = port2_result.second;
     else
-        other_port = port2_result.second;
+        checksum_port = port2_result.second;
 
     if (port3_result.first == "secret")
         secret_port = port3_result.second;
@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
     else if (port3_result.first == "expstn")
         expstn_port = port3_result.second;
     else
-        other_port = port3_result.second;
+        checksum_port = port3_result.second;
 
     if (port4_result.first == "secret")
         secret_port = port4_result.second;
@@ -357,7 +357,7 @@ int main(int argc, char *argv[])
     else if (port4_result.first == "expstn")
         expstn_port = port4_result.second;
     else
-        other_port = port4_result.second;
+        checksum_port = port4_result.second;
 
     auto secret_response = solve_secret_port(ip_addr, secret_port);
     if (secret_response.first == -1 || secret_response.second == -1)
@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    solve_other_port(ip_addr, other_port, secret_response.second);
+    solve_checksum_port(ip_addr, checksum_port, secret_response.second);
     solve_dark_port(ip_addr, dark_port, secret_response.second);
     solve_expstn_port(ip_addr, expstn_port);
     solve_secret_secret_port(ip_addr, secret_response.first);
