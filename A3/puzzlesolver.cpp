@@ -231,17 +231,29 @@ bool solve_other_port(const std::string &addr, int port, uint32_t secret)
         {
             return false;
         }
+        std::cout << buffer << std::endl;
         // todo: extract checksum and source address from the buffer. extract the last 6 for the info in network order.
-        // int checksum;
-        // std::string source_address;
-        // std::string response(buffer);
-        // size_t pos = response.find_last_of('');
-        // if (pos != std::string::npos)
-        // {
-        //     std::string number_str = response.substr(pos + 2, 4);
-        //     int extracted_port = std::stoi(number_str);
-        // }
+        int checksum;
+        std::string source_address, information;
+        std::string response(buffer);
 
+        size_t pos = response.find("0x");
+        if (pos != std::string::npos)
+        {
+            std::string number_str = response.substr(pos + 2, 6);
+            checksum = std::stoi(number_str, nullptr, 16);
+        }
+        size_t start_pos = response.find("being");
+        start_pos += 6;
+        size_t end_pos = response.find("!");
+        end_pos -= 1;
+        source_address = response.substr(start_pos, end_pos);
+
+        // todo: covert to something we can use?
+        information = response.substr(response.length() - 6);
+        std::cout << information << std::endl;
+
+        return true;
         // Hello group 36! To get the secret phrase, reply to this message with a UDP message where the payload is a encapsulated, valid UDP IPv4 packet, that has a valid UDP checksum of [checksum], and with the source address being [port]! (Hint: all you need is a normal UDP socket which you use to send the IPv4 and UDP headers possibly with a payload) (the last 6 bytes of this message contain this information in network order)q~=?�
         int inner_attempts = 0;
         while (inner_attempts < max_retries)
