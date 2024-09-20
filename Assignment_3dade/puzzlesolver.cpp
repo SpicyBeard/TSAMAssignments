@@ -220,7 +220,7 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
         // Send me a 4-byte message containing the signature you got from S.E.C.R.E.T in the first 4 bytes (in network byte order).
         if (sendto(sockfd, &message, sizeof(message), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
         {
-            std::cerr << "Failed to send message to IP address first." << std::endl;
+            std::cerr << " hullu Failed to send message to IP address first." << std::endl;
             close(sockfd);
             return false;
         }
@@ -238,7 +238,7 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
         std::string source_address, information;
         std::string response(buffer);
 
-        std::cout << checksum << std::endl;
+        std::cout << "checksum: " << checksum << std::endl;
 
         size_t pos = response.find("0x");
         if (pos != std::string::npos)
@@ -254,7 +254,12 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
 
         // todo: covert to something we can use?
         information = response.substr(response.length() - 6);
-        std::cout << information << std::endl;
+        std::cout << "information : " << information << std::endl;
+        std::cout << source_address << std::endl;   
+        uint32_t port = std::stoi(source_address);
+        std::cout << port << std::endl;
+        uint32_t checksum_network = htonl(checksum);
+        std::cout << checksum_network << std::endl;
 
         return true;
         // Hello group 36! To get the secret phrase, reply to this message with a UDP message where the payload is a encapsulated, valid UDP IPv4 packet, that has a valid UDP checksum of [checksum], and with the source address being [port]! (Hint: all you need is a normal UDP socket which you use to send the IPv4 and UDP headers possibly with a payload) (the last 6 bytes of this message contain this information in network order)q~=?�
@@ -265,14 +270,6 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
 
             // try again if failed
             ++inner_attempts;
-            struct psuedo_header { 
-                u_int32_t source_address;
-                u_int32_t dest_address;
-                u_int8_t placeholder;
-                u_int8_t protocol;
-                u_int16_t udp_length;
-            };
-            
 
 
         }
@@ -285,6 +282,17 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
     std::cout << "youve failed bruh" << std::endl;
     close(sockfd);
     return false;
+}
+
+void calculate_checksum (unsigned short *buf, int nwords)
+{
+    unsigned long sum;
+    for (sum = 0; nwords > 0; nwords--)
+        sum += *buf++;
+    sum = (sum >> 16) + (sum &0xffff);
+    sum += (sum >> 16);
+    unsigned short result = ~sum;
+    std::cout << std::hex << result << std::endl;
 }
 
 bool solve_dark_port(const std::string &addr, int port, int secret)
@@ -381,7 +389,6 @@ int main(int argc, char *argv[])
     }
 
     solve_checksum_port(ip_addr, checksum_port, secret_response.second);
-    std::cout << secret_response.second << std::endl;
 
     //solve_dark_port(ip_addr, dark_port, secret_response.second);
     //solve_expstn_port(ip_addr, expstn_port);
