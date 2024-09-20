@@ -261,6 +261,8 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
         uint32_t checksum_network = htonl(checksum);
         std::cout << checksum_network << std::endl;
 
+
+
         return true;
         // Hello group 36! To get the secret phrase, reply to this message with a UDP message where the payload is a encapsulated, valid UDP IPv4 packet, that has a valid UDP checksum of [checksum], and with the source address being [port]! (Hint: all you need is a normal UDP socket which you use to send the IPv4 and UDP headers possibly with a payload) (the last 6 bytes of this message contain this information in network order)q~=?�
         int inner_attempts = 0;
@@ -387,7 +389,7 @@ int main(int argc, char *argv[])
         std::cout << "Failed to solve secret port." << std::endl;
         return -1;
     }
-
+    
     solve_checksum_port(ip_addr, checksum_port, secret_response.second);
 
     //solve_dark_port(ip_addr, dark_port, secret_response.second);
