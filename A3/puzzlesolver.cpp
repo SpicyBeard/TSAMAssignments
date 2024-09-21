@@ -384,16 +384,13 @@ bool solve_dark_port(const string &addr, int port, int secret)
 
     // UDP header
     struct udphdr *udph = (struct udphdr *)(datagram + sizeof(struct iphdr));
-
     struct sockaddr_in sin;
     struct pseudo_header psh;
 
     // Data part
-    // data = datagram + sizeof(struct iphdr) + sizeof(struct udphdr);
-    // string secret_str = to_string(secret);
-    // strcpy(data, secret_str.c_str());
     data = datagram + sizeof(struct iphdr) + sizeof(struct udphdr);
-    strcpy(data, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    uint32_t secret_network_order = htonl(secret);
+    memcpy(data, &secret_network_order, sizeof(secret_network_order));
 
     sin.sin_family = AF_INET;
     sin.sin_port = htons(port);
@@ -403,7 +400,7 @@ bool solve_dark_port(const string &addr, int port, int secret)
     iph->ihl = 5;
     iph->version = 4;
     iph->tos = 0;
-    iph->tot_len = sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(data);
+    iph->tot_len = sizeof(struct iphdr) + sizeof(struct udphdr) + sizeof(secret_network_order);
     iph->id = htonl(54321); // Id of this packet
     iph->frag_off = 0x80;   // evil bit?
     iph->ttl = 255;
@@ -418,31 +415,30 @@ bool solve_dark_port(const string &addr, int port, int secret)
     // UDP header
     udph->source = htons(source_port); // Let the OS assign the source port dynamically
     udph->dest = htons(port);
-    udph->len = htons(8 + strlen(data)); // UDP header size
-    udph->check = 0;                     // leave checksum 0 now, filled later by pseudo header
+    udph->len = htons(sizeof(struct udphdr) + sizeof(secret_network_order));
+    udph->check = 0; // leave checksum 0 now, filled later by pseudo header
 
     // Now the UDP checksum using the pseudo header
-    psh.source_address = inet_addr(source_ip.c_str()); // Dynamically set the source IP
+    psh.source_address = inet_addr(source_ip.c_str());
     psh.dest_address = sin.sin_addr.s_addr;
     psh.placeholder = 0;
     psh.protocol = IPPROTO_UDP;
-    psh.udp_length = htons(sizeof(struct udphdr) + strlen(data));
+    psh.udp_length = htons(sizeof(struct udphdr) + sizeof(secret_network_order));
 
-    int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr) + strlen(data);
+    int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr) + sizeof(secret_network_order);
     pseudogram = (char *)malloc(psize);
 
     memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
-    memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr) + strlen(data));
+    memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr) + sizeof(secret_network_order));
 
     udph->check = csum((unsigned short *)pseudogram, psize);
 
     int attempts = 0;
     int max_retries = 5;
+    // string messages
 
     while (attempts < max_retries)
     {
-        // cout << "Datagram: " << datagram << endl;
-        // Send the packet
         if (sendto(s, datagram, iph->tot_len, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0)
         {
             perror("sendto failed");
