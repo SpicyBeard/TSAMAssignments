@@ -336,8 +336,7 @@ pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_a
     }
 }
 
-bool solve_dark_port(const string &addr, int port, int secret)
-// todo
+int solve_dark_port(const string &addr, int port, int secret)
 // The dark side of network programming is a pathway to many abilities some consider to be...unnatural. I am an evil port, I will only communicate with evil processes! (https://en.wikipedia.org/wiki/Evil_bit)
 // Send us a message of 4 bytes containing the signature that you created with S.E.C.R.E.T
 {
@@ -351,7 +350,7 @@ bool solve_dark_port(const string &addr, int port, int secret)
     if (s < 0)
     {
         perror("Error creating socket.");
-        return false;
+        return -1;
     }
     // Set socket option to include IP headers
     int one = 1;
@@ -359,7 +358,7 @@ bool solve_dark_port(const string &addr, int port, int secret)
     {
         perror("Failed to set socket option");
         close(s);
-        return false;
+        return -1;
     }
 
     // Set a timeout for the socket
@@ -370,7 +369,7 @@ bool solve_dark_port(const string &addr, int port, int secret)
     {
         perror("Failed to set socket receive timeout");
         close(s);
-        return false;
+        return -1;
     }
 
     // Datagram to represent the packet
@@ -384,16 +383,13 @@ bool solve_dark_port(const string &addr, int port, int secret)
 
     // UDP header
     struct udphdr *udph = (struct udphdr *)(datagram + sizeof(struct iphdr));
-
     struct sockaddr_in sin;
     struct pseudo_header psh;
 
     // Data part
-    // data = datagram + sizeof(struct iphdr) + sizeof(struct udphdr);
-    // string secret_str = to_string(secret);
-    // strcpy(data, secret_str.c_str());
     data = datagram + sizeof(struct iphdr) + sizeof(struct udphdr);
-    strcpy(data, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    uint32_t secret_network_order = htonl(secret);
+    memcpy(data, &secret_network_order, sizeof(secret_network_order));
 
     sin.sin_family = AF_INET;
     sin.sin_port = htons(port);
@@ -403,7 +399,7 @@ bool solve_dark_port(const string &addr, int port, int secret)
     iph->ihl = 5;
     iph->version = 4;
     iph->tos = 0;
-    iph->tot_len = sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(data);
+    iph->tot_len = sizeof(struct iphdr) + sizeof(struct udphdr) + sizeof(secret_network_order);
     iph->id = htonl(54321); // Id of this packet
     iph->frag_off = 0x80;   // evil bit?
     iph->ttl = 255;
@@ -418,31 +414,30 @@ bool solve_dark_port(const string &addr, int port, int secret)
     // UDP header
     udph->source = htons(source_port); // Let the OS assign the source port dynamically
     udph->dest = htons(port);
-    udph->len = htons(8 + strlen(data)); // UDP header size
-    udph->check = 0;                     // leave checksum 0 now, filled later by pseudo header
+    udph->len = htons(sizeof(struct udphdr) + sizeof(secret_network_order));
+    udph->check = 0; // leave checksum 0 now, filled later by pseudo header
 
     // Now the UDP checksum using the pseudo header
-    psh.source_address = inet_addr(source_ip.c_str()); // Dynamically set the source IP
+    psh.source_address = inet_addr(source_ip.c_str());
     psh.dest_address = sin.sin_addr.s_addr;
     psh.placeholder = 0;
     psh.protocol = IPPROTO_UDP;
-    psh.udp_length = htons(sizeof(struct udphdr) + strlen(data));
+    psh.udp_length = htons(sizeof(struct udphdr) + sizeof(secret_network_order));
 
-    int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr) + strlen(data);
+    int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr) + sizeof(secret_network_order);
     pseudogram = (char *)malloc(psize);
 
     memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
-    memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr) + strlen(data));
+    memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr) + sizeof(secret_network_order));
 
     udph->check = csum((unsigned short *)pseudogram, psize);
 
     int attempts = 0;
     int max_retries = 5;
+    // string messages
 
     while (attempts < max_retries)
     {
-        // cout << "Datagram: " << datagram << endl;
-        // Send the packet
         if (sendto(s, datagram, iph->tot_len, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0)
         {
             perror("sendto failed");
@@ -456,9 +451,16 @@ bool solve_dark_port(const string &addr, int port, int secret)
             // Check if a response is received
             if (recvfrom(udp_socket, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
             {
-                cout << buffer << endl;
+                close(udp_socket);
                 close(s);
-                return true;
+                string response(buffer);
+                size_t pos = response.find_last_of(':');
+                if (pos != string::npos)
+                {
+                    string number_str = response.substr(pos + 2, 5);
+                    int extracted_port = stoi(number_str);
+                    return extracted_port;
+                }
             }
             else
             {
@@ -468,8 +470,9 @@ bool solve_dark_port(const string &addr, int port, int secret)
         attempts++;
     }
 
+    close(udp_socket);
     close(s);
-    return false;
+    return -1;
 }
 
 bool solve_expstn_port(const string &addr, int port)
@@ -596,8 +599,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    solve_secret_secret_port(ip_addr, secret_response.first, ports);
-    // solve_checksum_port(ip_addr, checksum_port, secret_response.second);
-    solve_dark_port(ip_addr, dark_port, secret_response.second);
+    solve_checksum_port(ip_addr, checksum_port, secret_response.second);
+    int dark_secret_port = solve_dark_port(ip_addr, dark_port, secret_response.second);
     // solve_expstn_port(ip_addr, expstn_port);
 }
