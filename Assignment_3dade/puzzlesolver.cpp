@@ -237,11 +237,6 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
         std::string source_address, information;
         std::string response(buffer);
 
-<<<<<<< HEAD
-        std::cout << "checksum: " << checksum << std::endl;
-
-=======
->>>>>>> main
         size_t pos = response.find("0x");
         if (pos != std::string::npos)
         {
@@ -256,17 +251,6 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
 
         // todo: maybe use this instead of extracting from the buffer
         information = response.substr(response.length() - 6);
-<<<<<<< HEAD
-        std::cout << "information : " << information << std::endl;
-        std::cout << source_address << std::endl;   
-        uint32_t port = std::stoi(source_address);
-        std::cout << port << std::endl;
-        uint32_t checksum_network = htonl(checksum);
-        std::cout << checksum_network << std::endl;
-
-
-=======
->>>>>>> main
 
         return true;
         // Hello group 36! To get the secret phrase, reply to this message with a UDP message where the payload is a encapsulated, valid UDP IPv4 packet, that has a valid UDP checksum of [checksum], and with the source address being [port]! (Hint: all you need is a normal UDP socket which you use to send the IPv4 and UDP headers possibly with a payload) (the last 6 bytes of this message contain this information in network order)q~=?�
@@ -277,11 +261,6 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
 
             // try again if failed
             ++inner_attempts;
-<<<<<<< HEAD
-
-
-=======
->>>>>>> main
         }
 
         // try again if failed
@@ -293,17 +272,6 @@ bool solve_checksum_port(const std::string &addr, int port, uint32_t secret)
     return false;
 }
 
-<<<<<<< HEAD
-void calculate_checksum (unsigned short *buf, int nwords)
-{
-    unsigned long sum;
-    for (sum = 0; nwords > 0; nwords--)
-        sum += *buf++;
-    sum = (sum >> 16) + (sum &0xffff);
-    sum += (sum >> 16);
-    unsigned short result = ~sum;
-    std::cout << std::hex << result << std::endl;
-=======
 struct pseudo_header
 {
     u_int32_t source_address;
@@ -337,7 +305,6 @@ unsigned short csum(unsigned short *ptr, int nbytes)
     answer = (short)~sum;
 
     return (answer);
->>>>>>> main
 }
 
 bool solve_dark_port(const std::string &addr, int port, int secret)
@@ -485,6 +452,7 @@ bool solve_dark_port(const std::string &addr, int port, int secret)
         // Data send successfully
         else
         {
+        std::cout << "Data Sent " << std::endl;
             char buffer[1024];
             std::memset(buffer, 0, sizeof(buffer));
 
@@ -630,18 +598,9 @@ int main(int argc, char *argv[])
         std::cout << "Failed to solve secret port." << std::endl;
         return -1;
     }
-<<<<<<< HEAD
-    
-    solve_checksum_port(ip_addr, checksum_port, secret_response.second);
-
-    //solve_dark_port(ip_addr, dark_port, secret_response.second);
-    //solve_expstn_port(ip_addr, expstn_port);
-    //solve_secret_secret_port(ip_addr, secret_response.first);
-=======
 
     solve_secret_secret_port(ip_addr, secret_response.first, ports);
-    // solve_checksum_port(ip_addr, checksum_port, secret_response.second);
+    solve_checksum_port(ip_addr, checksum_port, secret_response.second);
     solve_dark_port(ip_addr, dark_port, secret_response.second);
     // solve_expstn_port(ip_addr, expstn_port);
->>>>>>> main
 }
