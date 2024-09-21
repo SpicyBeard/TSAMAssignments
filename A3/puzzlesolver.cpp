@@ -336,7 +336,7 @@ pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_a
     }
 }
 
-bool solve_dark_port(const string &addr, int port, int secret)
+int solve_dark_port(const string &addr, int port, int secret)
 // todo
 // The dark side of network programming is a pathway to many abilities some consider to be...unnatural. I am an evil port, I will only communicate with evil processes! (https://en.wikipedia.org/wiki/Evil_bit)
 // Send us a message of 4 bytes containing the signature that you created with S.E.C.R.E.T
@@ -351,7 +351,7 @@ bool solve_dark_port(const string &addr, int port, int secret)
     if (s < 0)
     {
         perror("Error creating socket.");
-        return false;
+        return -1;
     }
     // Set socket option to include IP headers
     int one = 1;
@@ -359,7 +359,7 @@ bool solve_dark_port(const string &addr, int port, int secret)
     {
         perror("Failed to set socket option");
         close(s);
-        return false;
+        return -1;
     }
 
     // Set a timeout for the socket
@@ -370,7 +370,7 @@ bool solve_dark_port(const string &addr, int port, int secret)
     {
         perror("Failed to set socket receive timeout");
         close(s);
-        return false;
+        return -1;
     }
 
     // Datagram to represent the packet
@@ -452,9 +452,16 @@ bool solve_dark_port(const string &addr, int port, int secret)
             // Check if a response is received
             if (recvfrom(udp_socket, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
             {
-                cout << buffer << endl;
+                close(udp_socket);
                 close(s);
-                return true;
+                string response(buffer);
+                size_t pos = response.find_last_of(':');
+                if (pos != string::npos)
+                {
+                    string number_str = response.substr(pos + 2, 5);
+                    int extracted_port = stoi(number_str);
+                    return extracted_port;
+                }
             }
             else
             {
@@ -464,8 +471,9 @@ bool solve_dark_port(const string &addr, int port, int secret)
         attempts++;
     }
 
+    close(udp_socket);
     close(s);
-    return false;
+    return -1;
 }
 
 bool solve_expstn_port(const string &addr, int port)
