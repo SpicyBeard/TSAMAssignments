@@ -337,7 +337,6 @@ pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_a
 }
 
 int solve_dark_port(const string &addr, int port, int secret)
-// todo
 // The dark side of network programming is a pathway to many abilities some consider to be...unnatural. I am an evil port, I will only communicate with evil processes! (https://en.wikipedia.org/wiki/Evil_bit)
 // Send us a message of 4 bytes containing the signature that you created with S.E.C.R.E.T
 {
@@ -600,8 +599,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    solve_secret_secret_port(ip_addr, secret_response.first, ports);
-    // solve_checksum_port(ip_addr, checksum_port, secret_response.second);
-    solve_dark_port(ip_addr, dark_port, secret_response.second);
+    solve_checksum_port(ip_addr, checksum_port, secret_response.second);
+    int dark_secret_port = solve_dark_port(ip_addr, dark_port, secret_response.second);
     // solve_expstn_port(ip_addr, expstn_port);
 }
