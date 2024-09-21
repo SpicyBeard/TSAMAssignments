@@ -390,8 +390,8 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
             {
                 close(sockfd);
                 string secretphrase = extract_info_from_buffer(buffer);
+                cout << secretphrase << endl;
                 return secretphrase;
-                
 
             }
             else
