@@ -14,6 +14,63 @@
 
 using namespace std;
 
+struct pseudo_header
+{
+    u_int32_t source_address;
+    u_int32_t dest_address;
+    u_int8_t placeholder;
+    u_int8_t protocol;
+    u_int16_t udp_length;
+};
+
+unsigned short csum(unsigned short *ptr, int nbytes)
+{
+    register long sum;
+    unsigned short oddbyte;
+    register short answer;
+
+    sum = 0;
+    while (nbytes > 1)
+    {
+        sum += *ptr++;
+        nbytes -= 2;
+    }
+    if (nbytes == 1)
+    {
+        oddbyte = 0;
+        *((u_char *)&oddbyte) = *(u_char *)ptr;
+        sum += oddbyte;
+    }
+
+    sum = (sum >> 16) + (sum & 0xffff);
+    sum = sum + (sum >> 16);
+    answer = (short)~sum;
+
+    return (answer);
+}
+
+string extract_info_from_buffer(const char *buffer)
+{
+    // Convert the buffer to a string
+    string str(buffer);
+
+    // Find the positions of the first and second quotation marks
+    size_t first_quote_pos = str.find('"');
+    size_t second_quote_pos = str.find('"', first_quote_pos + 1);
+
+    // Check if both quotation marks are found
+    if (first_quote_pos != string::npos && second_quote_pos != string::npos)
+    {
+        // Extract the substring between the quotation marks
+        return str.substr(first_quote_pos + 1, second_quote_pos - first_quote_pos - 1);
+    }
+    else
+    {
+        // Return an empty string if quotation marks are not found
+        return "";
+    }
+}
+
 pair<int, struct sockaddr_in> connect_to_port(const string &addr, int port)
 {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -201,14 +258,14 @@ pair<int, int> solve_secret_port(const string &addr, int port)
     return make_pair(-1, -1);
 }
 
-bool solve_checksum_port(const string &addr, int port, uint32_t secret)
+string solve_checksum_port(const string &addr, int port, uint32_t secret)
 {
     pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
     int sockfd = connection.first;
     struct sockaddr_in server_addr = connection.second;
     if (sockfd < 0)
     {
-        return false;
+        return "";
     }
 
     char buffer[1024];
@@ -225,42 +282,118 @@ bool solve_checksum_port(const string &addr, int port, uint32_t secret)
         {
             cerr << "Failed to send message to IP address first." << endl;
             close(sockfd);
-            return false;
+            return " ";
         }
 
         memset(buffer, 0, sizeof(buffer));
         // Wait for a response. if there is a response, the port is open
         if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
         {
-            return false;
+            return " ";
         }
-        cout << buffer << endl;
-        int checksum;
-        string source_address, information;
-        string response(buffer);
 
-        size_t pos = response.find("0x");
-        if (pos != string::npos)
+        uint16_t checksum;
+        char info[6];
+        const char *newstart = buffer + strlen(buffer) - 6;
+        memcpy(info, newstart, 6);
+
+        memcpy(&checksum, info, 2);
+
+        uint32_t source_address;
+        memcpy(&source_address, info + 2, 4);
+
+        // Datagram to represent the packet
+        char datagram[4096], *data, *pseudogram;
+
+        // zero out the packet buffer
+        memset(datagram, 0, 4096);
+
+        // IP header
+        struct iphdr *iph = (struct iphdr *)datagram;
+
+        // UDP header
+        struct udphdr *udph = (struct udphdr *)(datagram + sizeof(struct iphdr));
+        struct sockaddr_in sin;
+        struct pseudo_header psh;
+
+        sin.sin_family = AF_INET;
+        sin.sin_port = htons(port);
+        sin.sin_addr.s_addr = inet_addr(addr.c_str());
+
+        // Fill in the IP Header
+        iph->ihl = 5;
+        iph->version = 4;
+        iph->tos = 0;
+        iph->tot_len = htons(sizeof(struct iphdr) + sizeof(struct udphdr));
+        iph->id = htonl(54321); // Id of this packet
+        iph->frag_off = 0x0;
+        iph->ttl = 255;
+        iph->protocol = IPPROTO_UDP;
+        iph->check = 0; // Set to 0 before calculating checksum
+        iph->saddr = source_address;
+        iph->daddr = sin.sin_addr.s_addr;
+
+        // Ip checksum
+        iph->check = csum((unsigned short *)datagram, ntohs(iph->tot_len));
+
+        // UDP header
+        udph->source = htons(0);
+        udph->dest = htons(port);
+        udph->len = htons(sizeof(struct udphdr));
+        udph->check = 0; // leave checksum 0 now
+
+        // Now the UDP checksum using the pseudo header
+        psh.source_address = iph->saddr;
+        psh.dest_address = iph->daddr;
+        psh.placeholder = 0;
+        psh.protocol = htons(IPPROTO_UDP);
+        psh.udp_length = htons(sizeof(struct udphdr));
+
+        uint16_t finalChecksum = 1;
+        uint16_t checksumPort = 0;
+        while (finalChecksum != checksum)
         {
-            string number_str = response.substr(pos + 2, 6);
-            checksum = stoi(number_str, nullptr, 16);
+            udph->source = htons(checksumPort);
+
+            int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr);
+            pseudogram = (char *)malloc(psize);
+
+            memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
+            memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr));
+
+            finalChecksum = csum((unsigned short *)pseudogram, psize);
+            checksumPort++;
         }
-        size_t start_pos = response.find("being");
-        start_pos += 6;
-        size_t end_pos = response.find("!");
-        end_pos -= 1;
-        source_address = response.substr(start_pos, end_pos);
 
-        // todo: maybe use this instead of extracting from the buffer
-        information = response.substr(response.length() - 6);
+        int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr);
+        udph->source -= 0x1100;
+        udph->check = checksum;
 
-        return true;
+        // calculate accurate data for the udp packet
+
         // Hello group 36! To get the secret phrase, reply to this message with a UDP message where the payload is a encapsulated, valid UDP IPv4 packet, that has a valid UDP checksum of [checksum], and with the source address being [port]! (Hint: all you need is a normal UDP socket which you use to send the IPv4 and UDP headers possibly with a payload) (the last 6 bytes of this message contain this information in network order)q~=?�
         int inner_attempts = 0;
         while (inner_attempts < max_retries)
         {
             // todo: create a valid UDP IPv4 packet to send in another UDP message
+            if (sendto(sockfd, datagram, ntohs(iph->tot_len), 0, (struct sockaddr *)&sin, sizeof(sin)) < 0)
+            {
+                perror("send to failed");
+            }
 
+            char buffer[1024];
+            memset(buffer, 0, sizeof(buffer));
+
+            if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
+            {
+                close(sockfd);
+                string secretphrase = extract_info_from_buffer(buffer);
+                return secretphrase;
+            }
+            else
+            {
+                cout << "No response received." << endl;
+            }
             // try again if failed
             ++inner_attempts;
         }
@@ -271,42 +404,7 @@ bool solve_checksum_port(const string &addr, int port, uint32_t secret)
 
     // All 5 attempts have failed, return false
     close(sockfd);
-    return false;
-}
-
-struct pseudo_header
-{
-    u_int32_t source_address;
-    u_int32_t dest_address;
-    u_int8_t placeholder;
-    u_int8_t protocol;
-    u_int16_t udp_length;
-};
-
-unsigned short csum(unsigned short *ptr, int nbytes)
-{
-    register long sum;
-    unsigned short oddbyte;
-    register short answer;
-
-    sum = 0;
-    while (nbytes > 1)
-    {
-        sum += *ptr++;
-        nbytes -= 2;
-    }
-    if (nbytes == 1)
-    {
-        oddbyte = 0;
-        *((u_char *)&oddbyte) = *(u_char *)ptr;
-        sum += oddbyte;
-    }
-
-    sum = (sum >> 16) + (sum & 0xffff);
-    sum = sum + (sum >> 16);
-    answer = (short)~sum;
-
-    return (answer);
+    return " ";
 }
 
 pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_addr)
@@ -412,7 +510,7 @@ int solve_dark_port(const string &addr, int port, int secret)
     iph->check = csum((unsigned short *)datagram, iph->tot_len);
 
     // UDP header
-    udph->source = htons(source_port); // Let the OS assign the source port dynamically
+    udph->source = htons(source_port);
     udph->dest = htons(port);
     udph->len = htons(sizeof(struct udphdr) + sizeof(secret_network_order));
     udph->check = 0; // leave checksum 0 now, filled later by pseudo header
@@ -475,7 +573,7 @@ int solve_dark_port(const string &addr, int port, int secret)
     return -1;
 }
 
-bool solve_expstn_port(const string &addr, int port)
+bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int dark_secret_port, int signature, string secret_phrase)
 // todo
 // Greetings! I am E.X.P.S.T.N, which stands for "Enhanced X-link Port Storage Transaction Node".
 // What can I do for you?
@@ -485,51 +583,98 @@ bool solve_expstn_port(const string &addr, int port)
 // 2. The correct format to send a knock: First, 4 bytes containing your S.E.C.R.E.T signature, followed by the secret phrase.
 // Tip: To discover the secret ports and their associated phrases, start by solving challenges on the ports detected using your port scanner. Happy hunting!
 {
-    return false;
-}
+    string secret_ports = to_string(dark_secret_port) + "," + to_string(secret_secret_port);
+    pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
+    int sockfd = connection.first;
+    struct sockaddr_in server_addr = connection.second;
+    if (sockfd < 0)
+    {
+        return "";
+    }
 
-bool solve_secret_secret_port(const string &addr, int port, string ports)
-// todo
-{
-    return false;
-    // cout << ports << endl;
-    // pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
-    // int sockfd = connection.first;
-    // struct sockaddr_in server_addr = connection.second;
-    // if (sockfd < 0)
-    // {
-    //     return false;
-    // }
+    char buffer[1024];
 
-    // char buffer[1024];
-    // int attempts = 0;
-    // int max_retries = 5;
+    int attempts = 0;
+    int max_retries = 5;
+    uint32_t message = htonl(signature);
 
-    // while (attempts < max_retries)
-    // {
-    //     // send a message to the port
-    //     if (sendto(sockfd, "hi", 3, 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-    //     {
-    //         cerr << "Failed to send message to IP address." << endl;
-    //         close(sockfd);
-    //         return "";
-    //     }
+    while (attempts < max_retries)
+    {
+        // send a message to the port
+        // Send me a 4-byte message containing the signature you got from S.E.C.R.E.T in the first 4 bytes (in network byte order).
+        if (sendto(sockfd, secret_ports.c_str(), secret_ports.size(), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+        {
+            cerr << "Failed to send message to IP address first." << endl;
+            close(sockfd);
+            return "";
+        }
 
-    //     // Wait for a response. if there is a response, the port is open
-    //     if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
-    //     {
-    //         close(sockfd);
-    //         cout << buffer << endl;
-    //         return true;
-    //     }
+        memset(buffer, 0, sizeof(buffer));
+        // Wait for a response. if there is a response, the port is open
+        if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
+        {
 
-    //     // try again if failed
-    //     ++attempts;
-    // }
+            return "";
+        }
+        else
+        {
+            close(sockfd);
+            break;
+        }
+        attempts++;
+    }
 
-    // // All 5 attempts have failed, return false
-    // close(sockfd);
-    // return false;
+    vector<int> secret_ports_vector;
+    string buffer_str(buffer);
+    size_t start = 0;
+    size_t end = buffer_str.find(',');
+
+    while (end != string::npos)
+    {
+        secret_ports_vector.push_back(stoi(buffer_str.substr(start, end - start)));
+        start = end + 1;
+        end = buffer_str.find(',', start);
+    }
+
+    // NOTE: the knocking message might not be right.
+    secret_ports_vector.push_back(stoi(buffer_str.substr(start, end)));
+    string knock_phrase;
+    knock_phrase = to_string(signature) + " " + secret_phrase;
+
+    for (int secret_port : secret_ports_vector)
+    {
+        // cout << "sending knock phrase: " << knock_phrase << endl;
+        pair<int, struct sockaddr_in> connection = connect_to_port(addr, secret_port);
+        int secret_sockfd = connection.first;
+        struct sockaddr_in server_addr = connection.second;
+        if (secret_sockfd < 0)
+        {
+            return "";
+        }
+        attempts = 0;
+        while (attempts < max_retries)
+        {
+            // cout << "senging knock phrase: " << knock_phrase << endl;
+            if (sendto(secret_sockfd, knock_phrase.c_str(), knock_phrase.size(), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+            {
+                cerr << "Failed to send message to IP address first." << endl;
+                close(secret_sockfd);
+                return "";
+            }
+
+            memset(buffer, 0, sizeof(buffer));
+            if (recvfrom(secret_sockfd, buffer, sizeof(buffer), 0, NULL, NULL) > 0)
+            {
+                cout << buffer << endl;
+                break;
+            }
+            attempts++;
+        }
+    }
+
+    // All 5 attempts have failed, return false
+    close(sockfd);
+    return "";
 }
 
 int main(int argc, char *argv[])
@@ -593,13 +738,14 @@ int main(int argc, char *argv[])
         checksum_port = port4_result.second;
 
     auto secret_response = solve_secret_port(ip_addr, secret_port);
+    int secret_secret_port = secret_response.first;
     if (secret_response.first == -1 || secret_response.second == -1)
     {
         cout << "Failed to solve secret port." << endl;
         return -1;
     }
 
-    solve_checksum_port(ip_addr, checksum_port, secret_response.second);
+    string secret_phrase = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
     int dark_secret_port = solve_dark_port(ip_addr, dark_port, secret_response.second);
-    // solve_expstn_port(ip_addr, expstn_port);
+    solve_expstn_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, secret_response.second, secret_phrase);
 }
