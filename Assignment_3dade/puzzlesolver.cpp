@@ -390,13 +390,12 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
             {
                 close(sockfd);
                 string secretphrase = extract_info_from_buffer(buffer);
-                cout << secretphrase << endl;
                 return secretphrase;
 
             }
             else
             {
-                cout << "No response received." << endl;
+                cout << "No response received. checksum" << endl;
             }
             // try again if failed
             ++inner_attempts;
@@ -524,10 +523,10 @@ int solve_dark_port(const string &addr, int port, int secret)
     psh.source_address = inet_addr(source_ip.c_str());
     psh.dest_address = sin.sin_addr.s_addr;
     psh.placeholder = 0;
-    psh.protocol = IPPROTO_UDP;
+    psh.protocol = htons(IPPROTO_UDP);
     psh.udp_length = htons(sizeof(struct udphdr) + sizeof(secret_network_order));
 
-    int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr) + sizeof(secret_network_order);
+    int psize = sizeof(struct pseudo_header)  + sizeof(secret_network_order);
     pseudogram = (char *)malloc(psize);
 
     memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
@@ -562,12 +561,14 @@ int solve_dark_port(const string &addr, int port, int secret)
                 {
                     string number_str = response.substr(pos + 2, 5);
                     int extracted_port = stoi(number_str);
+                    cout << "extracted port: " << extracted_port << endl;
                     return extracted_port;
                 }
             }
             else
             {
-                cout << "No response received." << endl;
+
+                cout << "dark_port: No response received." << endl;
             }
         }
         attempts++;
@@ -601,9 +602,11 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
     int attempts = 0;
     int max_retries = 5;
     uint32_t message = htonl(signature);
-
+    cout << "starting dat knockin" << endl;
+    cout << message << endl;
     while (attempts < max_retries)
-    {
+    {   
+        cout << "attempt nb: " << attempts << endl;
         // send a message to the port
         // Send me a 4-byte message containing the signature you got from S.E.C.R.E.T in the first 4 bytes (in network byte order).
         if (sendto(sockfd, secret_ports.c_str(), secret_ports.size(), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
@@ -617,8 +620,8 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
         // Wait for a response. if there is a response, the port is open
         if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
         {
-
             return "";
+            
         }
         else
         {
@@ -640,6 +643,7 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
         end = buffer_str.find(',', start);
     }
 
+    cout << "hullu" << endl;
     // NOTE: the knocking message might not be right.
     secret_ports_vector.push_back(stoi(buffer_str.substr(start, end)));
     string knock_phrase;
@@ -658,7 +662,7 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
         attempts = 0;
         while (attempts < max_retries)
         {
-            // cout << "senging knock phrase: " << knock_phrase << endl;
+             cout << "sending knock phrase: " << knock_phrase << endl;
             if (sendto(secret_sockfd, knock_phrase.c_str(), knock_phrase.size(), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
             {
                 cerr << "Failed to send message to IP address first." << endl;
@@ -786,14 +790,16 @@ int main(int argc, char *argv[])
         checksum_port = port4_result.second;
 
     auto secret_response = solve_secret_port(ip_addr, secret_port);
+    int secret_secret_port = secret_response.first;
+
     if (secret_response.first == -1 || secret_response.second == -1)
     {
         cout << "Failed to solve secret port." << endl;
         return -1;
     }
 
-    //int dark_secret_port = solve_dark_port(ip_addr, dark_port, secret_response.second);
-    string secret_checksum_port = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
-    
-    // solve_expstn_port(ip_addr, expstn_port);
+    int dark_secret_port = solve_dark_port(ip_addr, dark_port, secret_response.second);
+    string secret_phrase = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
+    cout << dark_secret_port << endl;
+    solve_expstn_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, secret_response.second, secret_phrase);
 }
