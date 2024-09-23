@@ -60,7 +60,7 @@ bool port_is_open(const std::string &addr, int port)
         ++attempts;
     }
 
-    // If we reach here, all attempts have failed
+    // All attempts failed, port must be closed
     close(sockfd);
     return false;
 }
