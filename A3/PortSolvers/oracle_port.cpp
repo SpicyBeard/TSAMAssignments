@@ -70,14 +70,14 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
     // NOTE: the knocking message might not be right.
     // set up the knock message
     secret_ports_vector.push_back(stoi(buffer_str.substr(start, end)));
-    unsigned char* knocked_phrase =  new unsigned char[4 + secret_phrase.length()];
+    unsigned char *knocked_phrase = new unsigned char[4 + secret_phrase.length()];
     memcpy(knocked_phrase, &message, 4);
     memcpy(knocked_phrase + 4, secret_phrase.c_str(), secret_phrase.length());
 
     // go over all the ports and knock with the secret phrase
     for (int secret_port : secret_ports_vector)
     {
-        //cout << "sending knock : " << knocked_phrase << " to port " << secret_port <<  endl;
+        // cout << "sending knock : " << knocked_phrase << " to port " << secret_port <<  endl;
         pair<int, struct sockaddr_in> connection = connect_to_port(addr, secret_port);
         int secret_sockfd = connection.first;
         struct sockaddr_in server_addr = connection.second;
@@ -104,17 +104,18 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
             attempts++;
         }
     }
-    if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) > 0)
-    {
-        cout << buffer << endl;
-        cout << "done" << endl;
-        close(sockfd);
-    }
-    else{
-        cout << "failed" << endl;
-        close(sockfd);
+    // if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) > 0)
+    // {
+    //     cout << buffer << endl;
+    //     cout << "done" << endl;
+    //     close(sockfd);
+    // }
+    // else{
+    //     cout << "failed" << endl;
+    //     close(sockfd);
 
-    }
+    // }
+    close(sockfd);
     // All 5 attempts have failed, return false
     return "";
 }

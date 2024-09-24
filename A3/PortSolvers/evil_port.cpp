@@ -15,7 +15,7 @@ pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_a
         return make_pair("", -1);
     }
 
-    // Get and print the local address and port
+    // Get and return the local address and port
     struct sockaddr_in local_addr;
     socklen_t addr_len = sizeof(local_addr);
     if (getsockname(sockfd, (struct sockaddr *)&local_addr, &addr_len) == 0)
@@ -35,6 +35,10 @@ int solve_evil_port(const string &addr, int port, int secret)
     // set up a normal udp socket to revieve the response from the raw socket
     pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
     int udp_socket = connection.first;
+    if (udp_socket < 0)
+    {
+        return -1;
+    }
     struct sockaddr_in server_addr = connection.second;
 
     // extract the source address and port from the udp socket
@@ -146,7 +150,11 @@ int solve_evil_port(const string &addr, int port, int secret)
             memset(buffer, 0, sizeof(buffer));
 
             // Reviece the response on the udp socket
-            if (recvfrom(udp_socket, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
+            if (recvfrom(udp_socket, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
+            {
+                continue;
+            }
+            else
             {
                 close(udp_socket);
                 close(s);
@@ -160,10 +168,6 @@ int solve_evil_port(const string &addr, int port, int secret)
                     int extracted_port = stoi(number_str);
                     return extracted_port;
                 }
-            }
-            else
-            {
-                cout << "No response received." << endl;
             }
         }
         attempts++;

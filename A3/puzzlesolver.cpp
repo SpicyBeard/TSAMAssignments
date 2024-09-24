@@ -15,6 +15,7 @@
 #include "PortSolvers/checksum_port.h"
 #include "PortSolvers/evil_port.h"
 #include "PortSolvers/oracle_port.h"
+#include "PortSolvers/bonus_port.h"
 
 using namespace std;
 
@@ -70,7 +71,7 @@ string sort_port(string portmsg)
     {
         return "secret";
     }
-    else if (portmsg.find("https://en.wikipedia.org/wiki/Evil_bit") != string::npos)
+    else if (portmsg.find("The dark side") != string::npos)
     {
         return "dark";
     }
@@ -101,10 +102,18 @@ int main(int argc, char *argv[])
 
     // handle port sorting
     map<string, int> port_map;
-    for (int port : ports)
+    bool all_ports_found = false;
+
+    while (!all_ports_found)
     {
-        auto result = check_and_sort_port(ip_addr, port);
-        port_map[result.first] = result.second;
+        port_map.clear();
+        for (int port : ports)
+        {
+            auto result = check_and_sort_port(ip_addr, port);
+            port_map[result.first] = result.second;
+        }
+
+        all_ports_found = (port_map["secret"] != 0 && port_map["dark"] != 0 && port_map["checksum"] != 0 && port_map["expstn"] != 0);
     }
 
     int secret_port = port_map["secret"];
@@ -120,7 +129,7 @@ int main(int argc, char *argv[])
         cout << "Failed to solve secret port." << endl;
         return -1;
     }
-
+    cout << "secret: " << secret_response.second << endl;
     string secret_phrase = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
     int dark_secret_port = solve_evil_port(ip_addr, dark_port, secret_response.second);
     solve_expstn_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, secret_response.second, secret_phrase);
