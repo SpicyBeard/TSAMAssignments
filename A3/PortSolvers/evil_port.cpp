@@ -8,6 +8,10 @@ int solve_evil_port(const string &addr, int port, int secret)
     // set up a normal udp socket to revieve the response from the raw socket
     pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
     int udp_socket = connection.first;
+    if (udp_socket < 0)
+    {
+        return -1;
+    }
     struct sockaddr_in server_addr = connection.second;
 
     // extract the source address and port from the udp socket
@@ -119,7 +123,11 @@ int solve_evil_port(const string &addr, int port, int secret)
             memset(buffer, 0, sizeof(buffer));
 
             // Reviece the response on the udp socket
-            if (recvfrom(udp_socket, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
+            if (recvfrom(udp_socket, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
+            {
+                continue;
+            }
+            else
             {
                 close(udp_socket);
                 close(s);
@@ -133,10 +141,6 @@ int solve_evil_port(const string &addr, int port, int secret)
                     int extracted_port = stoi(number_str);
                     return extracted_port;
                 }
-            }
-            else
-            {
-                cout << "No response received." << endl;
             }
         }
         attempts++;
