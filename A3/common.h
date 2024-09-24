@@ -25,6 +25,9 @@ unsigned short calculate_checksum(unsigned short *ptr, int nbytes);
 // extract the secret ports from a buffer, starting at ":"
 int get_secret_port_from_buffer(const char *buffer);
 
+// get source ip and port from a socket
+pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_addr);
+
 // #pragma pack(push, 1)
 struct pseudo_header
 {

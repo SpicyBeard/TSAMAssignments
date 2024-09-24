@@ -7,7 +7,7 @@ TARGETS = scanner puzzlesolver
 
 # Source files
 SCANNER_SRC = scanner.cpp
-PUZZLESOLVER_SRC = puzzlesolver.cpp common.cpp PortSolvers/secret_port.cpp PortSolvers/checksum_port.cpp PortSolvers/evil_port.cpp PortSolvers/oracle_port.cpp
+PUZZLESOLVER_SRC = puzzlesolver.cpp common.cpp PortSolvers/secret_port.cpp PortSolvers/checksum_port.cpp PortSolvers/evil_port.cpp PortSolvers/oracle_port.cpp PortSolvers/bonus_port.cpp
 
 # Object files
 SCANNER_OBJ = $(SCANNER_SRC:.cpp=.o)
@@ -31,10 +31,11 @@ clean:
 # Dependencies
 scanner.o: scanner.cpp
 common.o: common.cpp common.h
-puzzlesolver.o: puzzlesolver.cpp common.h PortSolvers/secret_port.h PortSolvers/checksum_port.h PortSolvers/evil_port.h PortSolvers/oracle_port.h
+puzzlesolver.o: puzzlesolver.cpp common.h PortSolvers/secret_port.h PortSolvers/checksum_port.h PortSolvers/evil_port.h PortSolvers/oracle_port.h PortSolvers/bonus_port.h
 PortSolvers/secret_port.o: PortSolvers/secret_port.cpp PortSolvers/secret_port.h
 PortSolvers/checksum_port.o: PortSolvers/checksum_port.cpp PortSolvers/checksum_port.h
 PortSolvers/evil_port.o: PortSolvers/evil_port.cpp PortSolvers/evil_port.h
 PortSolvers/oracle_port.o: PortSolvers/oracle_port.cpp PortSolvers/oracle_port.h
+PortSolvers/bonus_port.o: PortSolvers/bonus_port.cpp PortSolvers/bonus_port.h
 
 .PHONY: all clean

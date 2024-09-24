@@ -1,5 +1,34 @@
 #include "common.h"
 
+
+// get the source ip address and port from a socket
+pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_addr)
+{
+    if (sockfd < 0)
+    {
+        return make_pair("", -1);
+    }
+
+    // Ensure the socket is connected
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        close(sockfd);
+        return make_pair("", -1);
+    }
+
+    // Get and print the local address and port
+    struct sockaddr_in local_addr;
+    socklen_t addr_len = sizeof(local_addr);
+    if (getsockname(sockfd, (struct sockaddr *)&local_addr, &addr_len) == 0)
+    {
+        return make_pair(inet_ntoa(local_addr.sin_addr), ntohs(local_addr.sin_port));
+    }
+    else
+    {
+        return make_pair("", -1);
+    }
+}
+
 // Connect to a port on a given IP address and return the socket file descriptor and server address
 pair<int, struct sockaddr_in> connect_to_port(const string &addr, int port)
 {
