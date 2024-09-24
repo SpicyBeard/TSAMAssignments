@@ -15,6 +15,7 @@
 #include "PortSolvers/checksum_port.h"
 #include "PortSolvers/evil_port.h"
 #include "PortSolvers/oracle_port.h"
+#include "PortSolvers/bonus_port.h"
 
 using namespace std;
 
@@ -124,6 +125,6 @@ int main(int argc, char *argv[])
     string secret_phrase = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
     int dark_secret_port = solve_evil_port(ip_addr, dark_port, secret_response.second);
     solve_expstn_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, secret_response.second, secret_phrase);
-
+    send_bonus_message(ip_addr, 4000);
     return 0;
 }

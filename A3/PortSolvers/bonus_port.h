@@ -15,12 +15,13 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <netdb.h>
+#include <netinet/ip_icmp.h>
 #include "../common.h"
 
 using namespace std;
 
 // send the message to the bonus ip
-void send_bonus_message(const string &addr, int port, const string &message);
+void send_bonus_message(const string &addr, int port);
 
 
 #endif // BONUS_PORT_H
