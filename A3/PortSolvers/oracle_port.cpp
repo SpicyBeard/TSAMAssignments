@@ -70,13 +70,14 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
     // NOTE: the knocking message might not be right.
     // set up the knock message
     secret_ports_vector.push_back(stoi(buffer_str.substr(start, end)));
-    string knock_phrase;
-    knock_phrase = to_string(message).c_str() + secret_phrase;
-    cout << knock_phrase << endl;
+    unsigned char* knocked_phrase =  new unsigned char[4 + secret_phrase.length()];
+    memcpy(knocked_phrase, &message, 4);
+    memcpy(knocked_phrase + 4, secret_phrase.c_str(), secret_phrase.length());
 
     // go over all the ports and knock with the secret phrase
     for (int secret_port : secret_ports_vector)
     {
+        //cout << "sending knock : " << knocked_phrase << " to port " << secret_port <<  endl;
         pair<int, struct sockaddr_in> connection = connect_to_port(addr, secret_port);
         int secret_sockfd = connection.first;
         struct sockaddr_in server_addr = connection.second;
@@ -87,7 +88,8 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
         attempts = 0;
         while (attempts < max_retries)
         {
-            if (sendto(secret_sockfd, &knock_phrase, sizeof(knock_phrase), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+            // if (sendto(secret_sockfd, knock_phrase.data(), knock_phrase.length(), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+            if (sendto(secret_sockfd, knocked_phrase, 4 + secret_phrase.length(), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
             {
                 cerr << "Failed to send message to IP address first." << endl;
             }
@@ -102,8 +104,17 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
             attempts++;
         }
     }
+    if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) > 0)
+    {
+        cout << buffer << endl;
+        cout << "done" << endl;
+        close(sockfd);
+    }
+    else{
+        cout << "failed" << endl;
+        close(sockfd);
 
+    }
     // All 5 attempts have failed, return false
-    close(sockfd);
     return "";
 }

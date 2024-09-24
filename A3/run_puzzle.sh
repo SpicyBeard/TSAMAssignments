@@ -3,9 +3,9 @@
 # Compile both C++ programs
 #g++ -o scanner scanner.cpp
 #g++ -o puzzlesolver puzzlesolver.cpp
+echo "Compiling necessery files" 
 make
 #print compile status
-echo "Compiling scanner.cpp and puzzlesolver.cpp"
 
 # Ip address and port range
 ip_addr="130.208.246.249"
@@ -30,7 +30,7 @@ port2=${open_ports[3]}
 port3=${open_ports[4]}
 port4=${open_ports[5]}
 
-Echo "Open ports found: $port1, $port2, $port3, $port4"
+echo "Open ports found: $port1, $port2, $port3, $port4"
 
 # Make sure the ports are not empty
 if [[ -z "$port1" || -z "$port2" || -z "$port3" || -z "$port4" ]]; then
@@ -41,3 +41,6 @@ fi
 # Run the puzzlesolver with the open ports
 echo "Running puzzlesolver with ports: $port1, $port2, $port3, $port4"
 ./puzzlesolver "$ip_addr" "$port1" "$port2" "$port3" "$port4"
+
+echo " Cleaning up the files"
+make clean

@@ -41,9 +41,8 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
         // send a message to the port containint the signature in network byte order
         if (sendto(sockfd, &message, sizeof(message), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
         {
-            cerr << "Failed to send message to IP address first." << endl;
-            close(sockfd);
-            return " ";
+            cerr << "Failed to send message to IP address. (checksum)" << endl;
+            
         }
 
         // clear the buffer and revieve a response
@@ -146,9 +145,9 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
             if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
             {
                 close(sockfd);
-                // TODO: check if the secret phrase should include the quotation marks
                 // extract the secret phrase and return it
                 string secretphrase = get_secret_phrase(buffer);
+                cout << "Secret checksum phrase: " << secretphrase << endl;
                 return secretphrase;
             }
             else
