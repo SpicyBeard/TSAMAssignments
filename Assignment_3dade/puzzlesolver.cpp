@@ -47,9 +47,9 @@ struct pseudo_header
 
 unsigned short csum(unsigned short *ptr, int nbytes)
 {
-    register long sum;
+    long sum;
     unsigned short oddbyte;
-    register short answer;
+    short answer;
 
     sum = 0;
     while (nbytes > 1)
@@ -347,27 +347,26 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
     psh.source_address = iph->saddr;
     psh.dest_address = iph->daddr;
     psh.placeholder = 0;
-    psh.protocol = htons(IPPROTO_UDP);
+    psh.protocol = IPPROTO_UDP;
     psh.udp_length = htons(sizeof(struct udphdr));
-
+    
     uint16_t finalChecksum = 1;
     uint16_t checksumPort = 0;
+    int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr);
     while (finalChecksum != checksum)
     {   
         udph->source = htons(checksumPort);
         
-        int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr);
         pseudogram = (char *)malloc(psize);
 
         memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
         memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr));
 
         finalChecksum = csum((unsigned short *)pseudogram, psize);
+        free(pseudogram);
         checksumPort++;
     }
 
-    int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr);
-    udph -> source -= 0x1100;
     udph->check = checksum; 
     
     //calculate accurate data for the udp packet
@@ -589,6 +588,7 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
 // Tip: To discover the secret ports and their associated phrases, start by solving challenges on the ports detected using your port scanner. Happy hunting!
 {
     string secret_ports = to_string(dark_secret_port) + "," + to_string(secret_secret_port);
+    cout << "Secret ports: " << secret_ports << endl;
     pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
     int sockfd = connection.first;
     struct sockaddr_in server_addr = connection.second;
@@ -642,8 +642,12 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
         start = end + 1;
         end = buffer_str.find(',', start);
     }
+<<<<<<< HEAD
 
     cout << "hullu" << endl;
+=======
+    cout << "Received buffer: " << buffer << endl;
+>>>>>>> main
     // NOTE: the knocking message might not be right.
     secret_ports_vector.push_back(stoi(buffer_str.substr(start, end)));
     string knock_phrase;
@@ -651,12 +655,13 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
 
     for (int secret_port : secret_ports_vector)
     {
-        // cout << "sending knock phrase: " << knock_phrase << endl;
+        cout << "sending knock phrase: " << knock_phrase << "to port: " << secret_port << endl;
         pair<int, struct sockaddr_in> connection = connect_to_port(addr, secret_port);
         int secret_sockfd = connection.first;
         struct sockaddr_in server_addr = connection.second;
         if (secret_sockfd < 0)
-        {
+        {   
+            cout << "Failed to connect to secret port." << endl;
             return "";
         }
         attempts = 0;
@@ -667,14 +672,14 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
             {
                 cerr << "Failed to send message to IP address first." << endl;
                 close(secret_sockfd);
-                return "";
+                
             }
 
             memset(buffer, 0, sizeof(buffer));
             if (recvfrom(secret_sockfd, buffer, sizeof(buffer), 0, NULL, NULL) > 0)
             {
                 cout << buffer << endl;
-                break;
+                
             }
             attempts++;
         }
@@ -799,7 +804,12 @@ int main(int argc, char *argv[])
     }
 
     int dark_secret_port = solve_dark_port(ip_addr, dark_port, secret_response.second);
+<<<<<<< HEAD
     string secret_phrase = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
     cout << dark_secret_port << endl;
     solve_expstn_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, secret_response.second, secret_phrase);
+=======
+    string secret_checksum_port = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
+    solve_expstn_port(ip_addr, expstn_port, secret_response.first, dark_secret_port, secret_response.second, secret_checksum_port);
+>>>>>>> main
 }
