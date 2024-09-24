@@ -642,12 +642,7 @@ bool solve_expstn_port(const string &addr, int port, int secret_secret_port, int
         start = end + 1;
         end = buffer_str.find(',', start);
     }
-<<<<<<< HEAD
-
-    cout << "hullu" << endl;
-=======
     cout << "Received buffer: " << buffer << endl;
->>>>>>> main
     // NOTE: the knocking message might not be right.
     secret_ports_vector.push_back(stoi(buffer_str.substr(start, end)));
     string knock_phrase;
@@ -804,12 +799,6 @@ int main(int argc, char *argv[])
     }
 
     int dark_secret_port = solve_dark_port(ip_addr, dark_port, secret_response.second);
-<<<<<<< HEAD
-    string secret_phrase = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
-    cout << dark_secret_port << endl;
-    solve_expstn_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, secret_response.second, secret_phrase);
-=======
     string secret_checksum_port = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
     solve_expstn_port(ip_addr, expstn_port, secret_response.first, dark_secret_port, secret_response.second, secret_checksum_port);
->>>>>>> main
 }
