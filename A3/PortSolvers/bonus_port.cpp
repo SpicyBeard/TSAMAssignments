@@ -1,7 +1,5 @@
 #include "bonus_port.h"
 
-
-
 struct psuedo_header
 {
     u_int32_t source_address;
@@ -15,75 +13,85 @@ struct psuedo_header
 void send_bonus_message(const string &addr, int port)
 {
     int sockfd;
-    struct sockaddr_in server_addr ;
-    char datagram[4096];
-    struct iphdr *iph = (struct iphdr *)datagram;
-    struct icmphdr *icmph = (struct icmphdr *)(datagram + sizeof(struct iphdr));
-    char *data = datagram + sizeof(struct iphdr) + sizeof(struct icmphdr);
-    struct sockaddr_in sin;
-
-    
+    struct sockaddr_in dest_addr;
+    struct icmphdr icmp_hdr;
+    const char *data = "$group_36$";
+    // const char *data = "\"$group_36$\"";
+    int data_len = strlen(data);
+    char packet[sizeof(struct icmphdr) + data_len];
 
     // Create raw socket
     sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (sockfd < 0)
     {
-        cerr << "Socket creation failed." << endl;
-        return ;
+        perror("socket");
+        return;
     }
 
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(port);
-    sin.sin_addr.s_addr = inet_addr(addr.c_str());
-
-
-    // setup source address and port 
-    pair<string, int> source_ip_and_port = get_source_ip_and_port(sockfd, server_addr);
-    string source_ip = source_ip_and_port.first;
-  
-
-    // Zero out the packet buffer
-    memset(datagram, 0, 4096);
-
-    // Fill in the ICMP Header
-    icmph->type = ICMP_ECHO;
-    icmph->code = 0;
-    icmph->un.echo.id = htons(1234); // Identifier
-    icmph->un.echo.sequence = htons(1); // Sequence number
-    icmph->checksum = 0; // Set to 0 before calculating checksum
-    icmph->checksum = calculate_checksum((unsigned short *)icmph, sizeof(struct icmphdr));
-    
-    // fill the data with our group number
-    strcpy(data, "group36");
-
-
-    // Fill in the IP Header
-    iph->ihl = 5;
-    iph->version = 4;
-    iph->tos = 0;
-    iph->tot_len = sizeof(struct iphdr) + sizeof(struct icmphdr) + strlen(data);
-    iph->id = htonl(54321); // ID of this packet
-    iph->frag_off = 0;
-    iph->ttl = 255;
-    iph->protocol = IPPROTO_ICMP;
-    iph->check = 0; // Set to 0 before calculating checksum
-    iph->saddr = sin.sin_addr.s_addr; // Source IP address
-    iph->daddr = inet_addr(addr.c_str()); // Destination IP address
-    
-    // IP checksum
-    iph->check = calculate_checksum((unsigned short *)datagram, iph->tot_len);
-
-
-    // Send the packet
-    if (sendto(sockfd, datagram, iph->tot_len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    // Set destination address
+    memset(&dest_addr, 0, sizeof(dest_addr));
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, addr.c_str(), &dest_addr.sin_addr) <= 0)
     {
-        cerr << "Failed to send packet." << endl;
+        perror("inet_pton");
         close(sockfd);
-        return ;
+        return;
+    }
+    // Set a timeout for the socket
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
+    {
+        perror("Failed to set socket receive timeout");
+        close(sockfd);
+        return;
     }
 
-    cout << "Packet sent successfully." << endl;
+    // Prepare ICMP header
+    memset(&icmp_hdr, 0, sizeof(icmp_hdr));
+    icmp_hdr.type = ICMP_ECHO;
+    icmp_hdr.code = 0;
+    icmp_hdr.un.echo.id = getpid();
+    icmp_hdr.un.echo.sequence = 1;
+
+    // Copy ICMP header and data to packet
+    memcpy(packet, &icmp_hdr, sizeof(icmp_hdr));
+    memcpy(packet + sizeof(struct icmphdr), data, data_len);
+
+    // Calculate checksum
+    icmp_hdr.checksum = calculate_checksum((unsigned short *)packet, sizeof(packet));
+    memcpy(packet, &icmp_hdr, sizeof(icmp_hdr)); // Update packet with checksum
+
+    // Send packet
+    if (sendto(sockfd, packet, sizeof(packet), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) <= 0)
+    {
+        perror("sendto");
+    }
+    // receive the response
+    char buffer[1024];
+    memset(buffer, 0, sizeof(buffer));
+    if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
+    {
+        perror("recvfrom");
+    }
+    else
+    {
+        struct icmphdr *icmp_hdr = (struct icmphdr *)(buffer + sizeof(struct iphdr));
+
+        if (icmp_hdr->type == ICMP_ECHOREPLY)
+        {
+            cout << "Received ICMP Echo Reply" << endl;
+            cout << "Identifier: " << ntohs(icmp_hdr->un.echo.id) << endl;
+            cout << "Sequence: " << ntohs(icmp_hdr->un.echo.sequence) << endl;
+            cout << "Data: " << (buffer + sizeof(struct iphdr) + sizeof(struct icmphdr)) << endl;
+        }
+        else
+        {
+            cout << "Received non-echo reply ICMP packet" << endl;
+        }
+    }
 
     close(sockfd);
-    return ;
 }
