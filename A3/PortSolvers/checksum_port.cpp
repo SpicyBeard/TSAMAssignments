@@ -149,7 +149,6 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
         }
 
         // recieve the response
-
         if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
         {
             continue;
