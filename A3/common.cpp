@@ -1,6 +1,7 @@
 #include "common.h"
 
-// send and recieve socket
+// send and receive a message from a socket and return the response.
+// Tries again if packet is dropped
 string send_and_receive(int sockfd, const void *message, size_t message_len, struct sockaddr_in &server_addr, int max_retries)
 {
     char buffer[1024];
@@ -107,17 +108,4 @@ unsigned short calculate_checksum(unsigned short *ptr, int nbytes)
         sum = (sum & 0xFFFF) + (sum >> 16);
     }
     return (unsigned short)(~sum);
-}
-
-int get_secret_port_from_buffer(const char *buffer)
-{
-    string response(buffer);
-    size_t pos = response.find_last_of(':');
-    if (pos != string::npos)
-    {
-        string number_str = response.substr(pos + 2, 4);
-        int extracted_port = stoi(number_str);
-        return extracted_port;
-    }
-    return -1;
 }
