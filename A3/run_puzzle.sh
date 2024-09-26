@@ -42,5 +42,5 @@ fi
 echo "Running puzzlesolver with ports: $port1, $port2, $port3, $port4"
 ./puzzlesolver "$ip_addr" "$port1" "$port2" "$port3" "$port4"
 
-echo " Cleaning up the files"
+echo "Cleaning up the files"
 make clean

@@ -30,34 +30,15 @@ string check_port(const string &addr, int port)
         return "";
     }
 
-    char buffer[1024];
-    int attempts = 0;
-    int max_retries = 5;
-
-    while (attempts < max_retries)
+    string message = send_and_receive(sockfd, "hello?", 7, server_addr, 5);
+    if (message == "")
     {
-        // send a message to the port
-        if (sendto(sockfd, "hello?", 7, 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-        {
-            cerr << "Failed to send message to IP address." << endl;
-            close(sockfd);
-            return "";
-        }
-
-        // Wait for a response. if there is a response, the port is open
-        if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
-        {
-            close(sockfd);
-            return buffer;
-        }
-
-        // try again if failed
-        ++attempts;
+        return "";
     }
-
-    // All 5 attempts have failed, return false
-    close(sockfd);
-    return "";
+    else
+    {
+        return message;
+    }
 }
 
 // Sort the port based on the message received from them
@@ -121,17 +102,40 @@ int main(int argc, char *argv[])
     int checksum_port = port_map["checksum"];
     int expstn_port = port_map["expstn"];
 
-    // and solve in the correct order
-    auto secret_response = solve_secret_port(ip_addr, secret_port);
-    int secret_secret_port = secret_response.first;
-    if (secret_response.first == -1 || secret_response.second == -1)
+    int secret_secret_port, signature;
+    while (true)
     {
-        cout << "Failed to solve secret port." << endl;
-        return -1;
+
+        auto secret_response = solve_secret_port(ip_addr, secret_port);
+        secret_secret_port = secret_response.first;
+        signature = secret_response.second;
+        if (secret_response.first != -1 && secret_response.second != -1)
+        {
+            break;
+        }
     }
-    string secret_phrase = solve_checksum_port(ip_addr, checksum_port, secret_response.second);
-    int dark_secret_port = solve_evil_port(ip_addr, dark_port, secret_response.second);
-    solve_expstn_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, secret_response.second, secret_phrase);
-    send_bonus_message(ip_addr, 4094);
+    // and solve in the correct order
+    string secret_phrase;
+    int dark_secret_port = -1;
+    int solve_expstn = -1;
+    bool send_bonus = false;
+    while (secret_phrase == "")
+    {
+        secret_phrase = solve_checksum_port(ip_addr, checksum_port, signature);
+    }
+    while (dark_secret_port < 0)
+    {
+        dark_secret_port = solve_evil_port(ip_addr, dark_port, signature);
+    }
+    while (solve_expstn < 0)
+    {
+        solve_expstn = solve_expstn_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, signature, secret_phrase);
+    }
+    while (!send_bonus)
+    {
+
+        send_bonus = send_bonus_message(ip_addr, 4094);
+    }
+    cout << "All ports solved! \nThanks for the puzzles :)" << endl;
     return 0;
 }

@@ -28,6 +28,9 @@ int get_secret_port_from_buffer(const char *buffer);
 // get source ip and port from a socket
 pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_addr);
 
+string send_and_receive(int sockfd, const void *message, size_t message_len, struct sockaddr_in &server_addr, int max_retries);
+
+
 // #pragma pack(push, 1)
 struct pseudo_header
 {

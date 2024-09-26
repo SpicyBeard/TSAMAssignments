@@ -21,7 +21,6 @@
 using namespace std;
 
 // send the message to the bonus ip
-void send_bonus_message(const string &addr, int port);
-
+bool send_bonus_message(const string &addr, int port);
 
 #endif // BONUS_PORT_H

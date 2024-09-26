@@ -1,5 +1,36 @@
 #include "common.h"
 
+// send and recieve socket
+string send_and_receive(int sockfd, const void *message, size_t message_len, struct sockaddr_in &server_addr, int max_retries)
+{
+    char buffer[1024];
+    int attempts = 0;
+
+    while (attempts < max_retries)
+    {
+        // Send a message to the port
+        if (sendto(sockfd, message, message_len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+        {
+            cerr << "Failed to send message to IP address. SnR" << endl;
+            perror("Error");
+            ++attempts;
+            continue;
+        }
+
+        // Wait for a response. If there is a response, the port is open
+        memset(buffer, 0, sizeof(buffer));
+        if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
+        {
+            return string(buffer);
+        }
+
+        // Try again if failed
+        ++attempts;
+    }
+
+    return "";
+}
+
 // get the source ip address and port from a socket
 pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_addr)
 {

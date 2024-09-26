@@ -3,10 +3,8 @@
 #include <iomanip>
 
 // extract the secret phrase from the buffer
-string get_secret_phrase(const char *buffer)
+string get_secret_phrase(string str)
 {
-    string str(buffer);
-
     // Find the positions of the first and second quotation marks
     size_t start_pos = str.find('"');
     size_t end_pos = str.find('"', start_pos + 1);
@@ -24,6 +22,7 @@ string get_secret_phrase(const char *buffer)
 // solve the checksum port
 string solve_checksum_port(const string &addr, int port, uint32_t secret)
 {
+    cout << "Solving Checksum port" << endl;
     // set up a connection to the port
     pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
     int sockfd = connection.first;
@@ -33,38 +32,17 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
         return "";
     }
 
-    char buffer[1024];
-    int attempts = 0;
-    int max_retries = 5;
     uint32_t message = htonl(secret);
 
-    // cout << "Sending to port: " << port << " & address: " << addr << endl;
-    while (attempts < max_retries)
+    string response = send_and_receive(sockfd, &message, sizeof(message), server_addr, 5);
+    if (response == "")
     {
-        // send a message to the port containint the signature in network byte order
-        if (sendto(sockfd, &message, sizeof(message), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-        {
-            cerr << "Failed to send message to IP address. (checksum)" << endl;
-        }
-
-        // clear the buffer and revieve a response
-        memset(buffer, 0, sizeof(buffer));
-        if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
-        {
-            cout << "First response when sending signature: " << buffer << endl;
-            break;
-        }
-        // try again if failed
-        ++attempts;
-    }
-    if (attempts == max_retries)
-    {
-        cout << "Failed to solve checksum port." << endl;
         close(sockfd);
         return "";
     }
+
     char last_six_bytes[6];
-    memcpy(last_six_bytes, buffer + strlen(buffer) - 6, 6);
+    memcpy(last_six_bytes, response.c_str() + response.length() - 6, 6);
 
     // Extract the checksum (first 2 bytes) in big-endian order
     uint16_t checksum;
@@ -142,34 +120,17 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
     }
     // and set the correct source.
     udph->check = checksum;
-    memset(buffer, 0, sizeof(buffer));
 
-    attempts = 0;
-    while (attempts < max_retries)
+    // send and receive from socket
+    string secretphrase = send_and_receive(sockfd, datagram, ntohs(iph->tot_len), sin, 5);
+    if (secretphrase != "")
     {
-        // send the packet in another packet
-        if (sendto(sockfd, datagram, ntohs(iph->tot_len), 0, (struct sockaddr *)&sin, sizeof(sin)) < 0)
-        {
-            perror("send to failed");
-        }
+        close(sockfd);
+        // extract the secret phrase and return it
 
-        // recieve the response
-        if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
-        {
-            continue;
-        }
-        else
-        {
-            close(sockfd);
-            // extract the secret phrase and return it
-            cout << "Checksum port solved." << endl;
-            string secretphrase = get_secret_phrase(buffer);
-            return secretphrase;
-        }
-        // try again if failed
-        ++attempts;
+        secretphrase = get_secret_phrase(secretphrase);
+        return secretphrase;
     }
-
     // All 5 attempts have failed, return false
     close(sockfd);
     return " ";

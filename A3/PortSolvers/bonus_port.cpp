@@ -10,8 +10,9 @@ struct psuedo_header
 };
 
 // send the message to the bonus ip
-void send_bonus_message(const string &addr, int port)
+bool send_bonus_message(const string &addr, int port)
 {
+    cout << "Solving bonus port" << endl;
     int sockfd;
     struct sockaddr_in dest_addr;
     struct icmphdr icmp_hdr;
@@ -25,7 +26,7 @@ void send_bonus_message(const string &addr, int port)
     if (sockfd < 0)
     {
         perror("socket");
-        return;
+        return false;
     }
 
     // Set destination address
@@ -36,7 +37,7 @@ void send_bonus_message(const string &addr, int port)
     {
         perror("inet_pton");
         close(sockfd);
-        return;
+        return false;
     }
     // Set a timeout for the socket
     struct timeval timeout;
@@ -46,7 +47,7 @@ void send_bonus_message(const string &addr, int port)
     {
         perror("Failed to set socket receive timeout");
         close(sockfd);
-        return;
+        return false;
     }
 
     // Prepare ICMP header
@@ -64,35 +65,8 @@ void send_bonus_message(const string &addr, int port)
     icmp_hdr.checksum = calculate_checksum((unsigned short *)packet, sizeof(packet));
     memcpy(packet, &icmp_hdr, sizeof(icmp_hdr)); // Update packet with checksum
 
-    // Send packet
-    if (sendto(sockfd, packet, sizeof(packet), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) <= 0)
-    {
-        perror("sendto");
-    }
-    // receive the response
-    char buffer[1024];
-    memset(buffer, 0, sizeof(buffer));
-    if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
-    {
-        perror("recvfrom");
-    }
-    else
-    {
-        struct icmphdr *icmp_hdr = (struct icmphdr *)(buffer + sizeof(struct iphdr));
-
-        if (icmp_hdr->type == ICMP_ECHOREPLY)
-        {
-            cout << "Received ICMP Echo Reply" << endl;
-            // cout << "Received ICMP Echo Reply" << endl;
-            // cout << "Identifier: " << ntohs(icmp_hdr->un.echo.id) << endl;
-            // cout << "Sequence: " << ntohs(icmp_hdr->un.echo.sequence) << endl;
-            // cout << "Data: " << (buffer + sizeof(struct iphdr) + sizeof(struct icmphdr)) << endl;
-        }
-        else
-        {
-            cout << "Received non-echo reply ICMP packet" << endl;
-        }
-    }
-
+    string response = send_and_receive(sockfd, packet, sizeof(packet), dest_addr, 5);
+    cout << "ICMP echo sent" << endl;
     close(sockfd);
+    return true;
 }
