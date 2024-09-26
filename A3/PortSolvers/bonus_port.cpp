@@ -83,9 +83,10 @@ void send_bonus_message(const string &addr, int port)
         if (icmp_hdr->type == ICMP_ECHOREPLY)
         {
             cout << "Received ICMP Echo Reply" << endl;
-            cout << "Identifier: " << ntohs(icmp_hdr->un.echo.id) << endl;
-            cout << "Sequence: " << ntohs(icmp_hdr->un.echo.sequence) << endl;
-            cout << "Data: " << (buffer + sizeof(struct iphdr) + sizeof(struct icmphdr)) << endl;
+            // cout << "Received ICMP Echo Reply" << endl;
+            // cout << "Identifier: " << ntohs(icmp_hdr->un.echo.id) << endl;
+            // cout << "Sequence: " << ntohs(icmp_hdr->un.echo.sequence) << endl;
+            // cout << "Data: " << (buffer + sizeof(struct iphdr) + sizeof(struct icmphdr)) << endl;
         }
         else
         {

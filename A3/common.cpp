@@ -1,6 +1,5 @@
 #include "common.h"
 
-
 // get the source ip address and port from a socket
 pair<string, int> get_source_ip_and_port(int sockfd, struct sockaddr_in server_addr)
 {

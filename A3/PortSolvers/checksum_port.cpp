@@ -1,4 +1,6 @@
 #include "checksum_port.h"
+#include <bitset>
+#include <iomanip>
 
 // extract the secret phrase from the buffer
 string get_secret_phrase(const char *buffer)
@@ -36,7 +38,7 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
     int max_retries = 5;
     uint32_t message = htonl(secret);
 
-    cout << "Sending to port: " << port << " & address: " << addr << endl;
+    // cout << "Sending to port: " << port << " & address: " << addr << endl;
     while (attempts < max_retries)
     {
         // send a message to the port containint the signature in network byte order
@@ -49,6 +51,7 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
         memset(buffer, 0, sizeof(buffer));
         if (recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL) >= 0)
         {
+            cout << "First response when sending signature: " << buffer << endl;
             break;
         }
         // try again if failed
@@ -60,18 +63,19 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
         close(sockfd);
         return "";
     }
+    char last_six_bytes[6];
+    memcpy(last_six_bytes, buffer + strlen(buffer) - 6, 6);
 
-    // extract the checksum and source address from the response
+    // Extract the checksum (first 2 bytes) in big-endian order
     uint16_t checksum;
-    char info[6];
-    const char *newstart = buffer + strlen(buffer) - 6;
-    memcpy(info, newstart, 6);
+    checksum = (last_six_bytes[0] << 8) | (last_six_bytes[1] & 0xFF);
+    checksum = ntohs(checksum);
 
-    memcpy(&checksum, info, 2);
-
+    // Extract the source address (last 4 bytes) in big-endian order
     uint32_t source_address;
-    memcpy(&source_address, info + 2, 4);
-    cout << "Checksum: " << hex << checksum << " Source address: " << source_address << endl;
+    source_address = (last_six_bytes[2] << 24) | ((last_six_bytes[3] & 0xFF) << 16) |
+                     ((last_six_bytes[4] & 0xFF) << 8) | (last_six_bytes[5] & 0xFF);
+    source_address = ntohl(source_address);
 
     // Datagram to represent the packet
     char datagram[4096], *pseudogram;
@@ -122,6 +126,7 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
     psh.udp_length = htons(sizeof(struct udphdr));
 
     // find the correct source port so that the checksum matches
+    // checksum is in network byte order
     uint16_t finalChecksum = 1;
     uint16_t checksumPort = 0;
     int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr);
@@ -131,7 +136,7 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
         pseudogram = (char *)malloc(psize);
         memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
         memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr));
-        finalChecksum = calculate_checksum((unsigned short *)pseudogram, psize);
+        finalChecksum = calculate_checksum((unsigned short *)pseudogram, psize); // returns in host byte order
         free(pseudogram);
         checksumPort++;
     }
@@ -157,9 +162,8 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
         {
             close(sockfd);
             // extract the secret phrase and return it
-            cout << "Recieving after sending packet: " << buffer << endl;
+            cout << "Checksum port solved." << endl;
             string secretphrase = get_secret_phrase(buffer);
-            cout << "Secret checksum phrase: " << secretphrase << endl;
             return secretphrase;
         }
         // try again if failed
