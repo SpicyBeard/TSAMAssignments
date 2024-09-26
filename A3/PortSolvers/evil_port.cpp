@@ -4,7 +4,7 @@ int solve_evil_port(const string &addr, int port, int secret)
 // The dark side of network programming is a pathway to many abilities some consider to be...unnatural. I am an evil port, I will only communicate with evil processes! (https://en.wikipedia.org/wiki/Evil_bit)
 // Send us a message of 4 bytes containing the signature that you created with S.E.C.R.E.T
 {
-    cout << "Solving evil port" << endl;
+    cout << "\nSolving evil port" << endl;
     // set up a normal udp socket to revieve the response from the raw socket
     pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
     int udp_socket = connection.first;
@@ -110,6 +110,7 @@ int solve_evil_port(const string &addr, int port, int secret)
     int attempts = 0;
     int max_retries = 5;
 
+    // try to send the message 5 times to account for packet loss
     while (attempts < max_retries)
     {
         // send a message trough the raw socket with the evil bit set
@@ -132,7 +133,6 @@ int solve_evil_port(const string &addr, int port, int secret)
                 close(udp_socket);
                 close(s);
                 // extract the port from the response and return it
-                // int secret_port = get_secret_port_from_buffer(buffer);
                 string response(buffer);
                 size_t pos = response.find_last_of(':');
                 if (pos != string::npos)
@@ -140,7 +140,6 @@ int solve_evil_port(const string &addr, int port, int secret)
                     string number_str = response.substr(pos + 2, 5);
                     int extracted_port = stoi(number_str);
                     cout << response << endl;
-                    cout << extracted_port << endl;
                     return extracted_port;
                 }
             }

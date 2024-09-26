@@ -20,6 +20,7 @@
 
 using namespace std;
 
-int solve_expstn_port(const string &addr, int port, int secret_secret_port, int dark_secret_port, int signature, string secret_phrase);
+// solve the oracle port
+int solve_oracle_port(const string &addr, int port, int secret_secret_port, int dark_secret_port, int signature, string secret_phrase);
 
 #endif // ORACLE_PORT_H

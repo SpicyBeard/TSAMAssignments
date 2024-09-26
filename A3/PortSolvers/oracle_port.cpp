@@ -1,6 +1,6 @@
 #include "oracle_port.h"
 
-int solve_expstn_port(const string &addr, int port, int secret_secret_port, int dark_secret_port, int signature, string secret_phrase)
+int solve_oracle_port(const string &addr, int port, int secret_secret_port, int dark_secret_port, int signature, string secret_phrase)
 // todo
 // Greetings! I am E.X.P.S.T.N, which stands for "Enhanced X-link Port Storage Transaction Node".
 // What can I do for you?
@@ -10,7 +10,7 @@ int solve_expstn_port(const string &addr, int port, int secret_secret_port, int 
 // 2. The correct format to send a knock: First, 4 bytes containing your S.E.C.R.E.T signature, followed by the secret phrase.
 // Tip: To discover the secret ports and their associated phrases, start by solving challenges on the ports detected using your port scanner. Happy hunting!
 {
-    cout << "Solving Oracle port" << endl;
+    cout << "\nSolving Oracle port" << endl;
     // create the comma seperated string of ports
     string secret_ports = to_string(dark_secret_port) + "," + to_string(secret_secret_port);
     // set up the socket

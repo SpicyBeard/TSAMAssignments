@@ -5,24 +5,20 @@
 // extract the secret phrase from the buffer
 string get_secret_phrase(string str)
 {
-    // Find the positions of the first and second quotation marks
     size_t start_pos = str.find('"');
     size_t end_pos = str.find('"', start_pos + 1);
 
-    // Check if both quotation marks are found
     if (start_pos != string::npos && end_pos != string::npos)
     {
-        // Extract the substring between the quotation marks
         return str.substr(start_pos + 1, end_pos - start_pos - 1);
     }
-    // Return an empty string if quotation marks are not found
     return "";
 }
 
 // solve the checksum port
 string solve_checksum_port(const string &addr, int port, uint32_t secret)
 {
-    cout << "Solving Checksum port" << endl;
+    cout << "\nSolving Checksum port" << endl;
     // set up a connection to the port
     pair<int, struct sockaddr_in> connection = connect_to_port(addr, port);
     int sockfd = connection.first;
@@ -44,12 +40,11 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
     char last_six_bytes[6];
     memcpy(last_six_bytes, response.c_str() + response.length() - 6, 6);
 
-    // Extract the checksum (first 2 bytes) in big-endian order
+    // Extract the checksum and source address in big-endian order
     uint16_t checksum;
     checksum = (last_six_bytes[0] << 8) | (last_six_bytes[1] & 0xFF);
     checksum = ntohs(checksum);
 
-    // Extract the source address (last 4 bytes) in big-endian order
     uint32_t source_address;
     source_address = (last_six_bytes[2] << 24) | ((last_six_bytes[3] & 0xFF) << 16) |
                      ((last_six_bytes[4] & 0xFF) << 8) | (last_six_bytes[5] & 0xFF);
@@ -57,8 +52,6 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
 
     // Datagram to represent the packet
     char datagram[4096], *pseudogram;
-
-    // zero out the packet buffer
     memset(datagram, 0, 4096);
 
     // IP header
@@ -126,12 +119,11 @@ string solve_checksum_port(const string &addr, int port, uint32_t secret)
     if (secretphrase != "")
     {
         close(sockfd);
-        // extract the secret phrase and return it
-
+        cout << secretphrase << endl;
         secretphrase = get_secret_phrase(secretphrase);
         return secretphrase;
     }
-    // All 5 attempts have failed, return false
+
     close(sockfd);
     return " ";
 }
