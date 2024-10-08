@@ -1,23 +1,13 @@
 #include "bonus_port.h"
 
-struct psuedo_header
-{
-    u_int32_t source_address;
-    u_int32_t dest_address;
-    u_int8_t placeholder;
-    u_int8_t protocol;
-    u_int16_t udp_length;
-};
-
 // send the message to the bonus ip
 bool send_bonus_message(const string &addr, int port)
 {
-    cout << "Solving bonus port" << endl;
+    cout << "\nSolving bonus port" << endl;
     int sockfd;
     struct sockaddr_in dest_addr;
     struct icmphdr icmp_hdr;
     const char *data = "$group_36$";
-    // const char *data = "\"$group_36$\"";
     int data_len = strlen(data);
     char packet[sizeof(struct icmphdr) + data_len];
 
@@ -39,6 +29,7 @@ bool send_bonus_message(const string &addr, int port)
         close(sockfd);
         return false;
     }
+
     // Set a timeout for the socket
     struct timeval timeout;
     timeout.tv_sec = 1;
@@ -63,7 +54,7 @@ bool send_bonus_message(const string &addr, int port)
 
     // Calculate checksum
     icmp_hdr.checksum = calculate_checksum((unsigned short *)packet, sizeof(packet));
-    memcpy(packet, &icmp_hdr, sizeof(icmp_hdr)); // Update packet with checksum
+    memcpy(packet, &icmp_hdr, sizeof(icmp_hdr));
 
     string response = send_and_receive(sockfd, packet, sizeof(packet), dest_addr, 5);
     cout << "ICMP echo sent" << endl;

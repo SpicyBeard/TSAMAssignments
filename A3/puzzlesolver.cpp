@@ -102,7 +102,14 @@ int main(int argc, char *argv[])
     int checksum_port = port_map["checksum"];
     int expstn_port = port_map["expstn"];
 
+    // set up the variables used
     int secret_secret_port, signature;
+    string secret_phrase;
+    int dark_secret_port = -1;
+    int solve_expstn = -1;
+    bool send_bonus = false;
+
+    // added while loops for all solving to make sure no packets are dropped
     while (true)
     {
 
@@ -115,10 +122,6 @@ int main(int argc, char *argv[])
         }
     }
     // and solve in the correct order
-    string secret_phrase;
-    int dark_secret_port = -1;
-    int solve_expstn = -1;
-    bool send_bonus = false;
     while (secret_phrase == "")
     {
         secret_phrase = solve_checksum_port(ip_addr, checksum_port, signature);
@@ -129,7 +132,7 @@ int main(int argc, char *argv[])
     }
     while (solve_expstn < 0)
     {
-        solve_expstn = solve_expstn_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, signature, secret_phrase);
+        solve_expstn = solve_oracle_port(ip_addr, expstn_port, secret_secret_port, dark_secret_port, signature, secret_phrase);
     }
     while (!send_bonus)
     {

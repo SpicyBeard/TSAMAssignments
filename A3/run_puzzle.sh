@@ -4,6 +4,7 @@
 #g++ -o scanner scanner.cpp
 #g++ -o puzzlesolver puzzlesolver.cpp
 echo "Compiling necessery files" 
+echo ""
 make
 #print compile status
 
@@ -31,7 +32,6 @@ port3=${open_ports[4]}
 port4=${open_ports[5]}
 
 echo "Open ports found: $port1, $port2, $port3, $port4"
-
 # Make sure the ports are not empty
 if [[ -z "$port1" || -z "$port2" || -z "$port3" || -z "$port4" ]]; then
     echo "Error: Not enough ports detected."
@@ -39,7 +39,8 @@ if [[ -z "$port1" || -z "$port2" || -z "$port3" || -z "$port4" ]]; then
 fi
 
 # Run the puzzlesolver with the open ports
-echo "Running puzzlesolver with ports: $port1, $port2, $port3, $port4"
+echo "Running puzzlesolver with ports: $port1, $port2, $port3, $port4 \n"
+echo ""
 ./puzzlesolver "$ip_addr" "$port1" "$port2" "$port3" "$port4"
 
 echo "Cleaning up the files"
