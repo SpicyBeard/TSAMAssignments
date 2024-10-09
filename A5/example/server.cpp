@@ -151,17 +151,28 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
                    char *buffer)
 {
+    // parse the command. first check if the start is 0x01 and the end is 0x04, if not, ignore the command
+    if (buffer[0] != 0x01 || buffer[strlen(buffer) - 1] != 0x04)
+    {
+        std::cout << "Invalid command from client" << std::endl;
+        send(clientSocket, "Invalid command", 16, 0);
+        return;
+    }
+    // Remove the start and end markers
+    buffer[strlen(buffer) - 1] = '\0';
+
+    // Process the command
     std::vector<std::string> tokens;
     std::string token;
+    std::istringstream stream(buffer + 1);
 
-    // Split command from client into tokens for parsing
-    std::stringstream stream(buffer);
-
-    while (stream >> token)
+    while (std::getline(stream, token, ','))
         tokens.push_back(token);
 
     if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
     {
+        // TODO: figure out how to connect to other servers
+        std::cout << "Connecting to server: " << tokens[1] << std::endl;
         clients[clientSocket]->name = tokens[1];
     }
     else if (tokens[0].compare("LEAVE") == 0)
@@ -172,52 +183,36 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 
         closeClient(clientSocket, openSockets, maxfds);
     }
-    else if (tokens[0].compare("WHO") == 0)
+    else if (tokens[0].compare("GETMSG") == 0 && tokens.size() == 2)
     {
-        std::cout << "Who is logged on" << std::endl;
-        std::string msg;
-
-        for (auto const &names : clients)
-        {
-            msg += names.second->name + ",";
-        }
-        // Reducing the msg length by 1 loses the excess "," - which
-        // granted is totally cheating.
-        send(clientSocket, msg.c_str(), msg.length() - 1, 0);
+        std::string msg = "Getting message from group number " + tokens[1];
+        std::cout << msg << std::endl;
+        send(clientSocket, msg.c_str(), msg.length(), 0);
     }
-    // This is slightly fragile, since it's relying on the order
-    // of evaluation of the if statement.
-    else if ((tokens[0].compare("MSG") == 0) && (tokens[1].compare("ALL") == 0))
+    else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 3)
     {
-        std::string msg;
-        for (auto i = tokens.begin() + 2; i != tokens.end(); i++)
-        {
-            msg += *i + " ";
-        }
-
-        for (auto const &pair : clients)
-        {
-            send(pair.second->sock, msg.c_str(), msg.length(), 0);
-        }
+        // NOTE: if you dont know this group, forward to the groups you know and let them handle it
+        std::string msg = "Sending '" + tokens[2] + "' to group number " + tokens[1];
+        std::cout << msg << std::endl;
+        send(clientSocket, msg.c_str(), msg.length(), 0);
     }
-    else if (tokens[0].compare("MSG") == 0)
+    else if (tokens[0].compare("LISTSERVERS") == 0)
     {
-        for (auto const &pair : clients)
+        // TODO: for some reason, this is an unknown command
+        // TODO: figure out how to list all servers we are connected to
+        std::string msg = "Listing all servers we are connected to: ";
+        ;
+        for (auto server : clients)
         {
-            if (pair.second->name.compare(tokens[1]) == 0)
-            {
-                std::string msg;
-                for (auto i = tokens.begin() + 2; i != tokens.end(); i++)
-                {
-                    msg += *i + " ";
-                }
-                send(pair.second->sock, msg.c_str(), msg.length(), 0);
-            }
+            msg += server.second->name + ", ";
         }
+        std::cout << msg << std::endl;
+        send(clientSocket, msg.c_str(), msg.length(), 0);
     }
     else
     {
         std::cout << "Unknown command from client:" << buffer << std::endl;
+        send(clientSocket, "Unknown command", 16, 0);
     }
 }
 

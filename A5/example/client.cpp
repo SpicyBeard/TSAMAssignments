@@ -27,8 +27,8 @@
 #include <thread>
 #include <map>
 
-uint8_t START = 0x01;
-uint8_t END = 0x04;
+// uint8_t START = 0x01;
+// uint8_t END = 0x04;
 
 // Threaded function for handling responss from server
 
@@ -51,7 +51,7 @@ void listenServer(int serverSocket)
         {
             time_t timestamp;
             time(&timestamp);
-            std::cout << "Received: " << buffer << " at " << ctime(&timestamp) << std::endl;
+            std::cout << "Received: " << buffer << "--" << ctime(&timestamp) << std::endl;
         }
     }
 }
@@ -131,18 +131,15 @@ int main(int argc, char *argv[])
         // add 0x01 to the start of the message and 0x04 to the end
         char messageServer[5000];
         bzero(messageServer, sizeof(messageServer));
-        messageServer[0] = START;
+        messageServer[0] = 0x01;
         // place the buffer in the messageServer after messageServer[0]
-        for (int i = 0; i < strlen(buffer); i++)
-        {
-            messageServer[i + 1] = buffer[i];
-        }
-        messageServer[strlen(buffer) + 2] = END;
+        memcpy(messageServer + 1, buffer, strlen(buffer));
+        messageServer[strlen(buffer) + 1] = 0x04;
 
         nwrite = send(serverSocket, messageServer, strlen(messageServer), 0);
         time_t timestamp;
         time(&timestamp);
-        std::cout << "sending: " << buffer << " at " << ctime(&timestamp) << std::endl;
+        std::cout << "sending: " << buffer << "--" << ctime(&timestamp) << std::endl;
 
         if (nwrite == -1)
         {
