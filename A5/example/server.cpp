@@ -282,6 +282,8 @@ int main(int argc, char *argv[])
                 clientSock = accept(listenSock, (struct sockaddr *)&client,
                                     &clientLen);
                 printf("Hello from Group_42\n");
+
+                send(clientSock, "Helo, <Group_42\n", 21, 0);
                 // Add new client to the list of open sockets
                 FD_SET(clientSock, &openSockets);
 
