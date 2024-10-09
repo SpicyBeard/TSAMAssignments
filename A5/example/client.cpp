@@ -21,7 +21,7 @@
 #include <map>
 #include <vector>
 #include <thread>
-
+#include <ctime>
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -49,9 +49,10 @@ void listenServer(int serverSocket)
         }
         else if (nread > 0)
         {
-            printf("%s\n", buffer);
+            time_t timestamp;
+            time(&timestamp);
+            std::cout << "Received: " << buffer << " at " << ctime(&timestamp) << std::endl;
         }
-        // printf("here\n");
     }
 }
 
@@ -139,6 +140,9 @@ int main(int argc, char *argv[])
         messageServer[strlen(buffer) + 2] = END;
 
         nwrite = send(serverSocket, messageServer, strlen(messageServer), 0);
+        time_t timestamp;
+        time(&timestamp);
+        std::cout << "sending: " << buffer << " at " << ctime(&timestamp) << std::endl;
 
         if (nwrite == -1)
         {
