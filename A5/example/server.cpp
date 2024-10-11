@@ -21,7 +21,8 @@
 #include <map>
 #include <vector>
 #include <list>
-
+#include <fstream>
+#include <ctime>
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -36,6 +37,7 @@
 #endif
 
 #define BACKLOG 5 // Allowed length of queue of waiting connections
+#define LOGFILE "server.log"
 
 // Simple class for handling connections from clients.
 //
@@ -146,6 +148,24 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
     FD_CLR(clientSocket, openSockets);
 }
 
+void logMessage(const std::string &msg)
+{
+    std::ofstream logfile;
+    logfile.open(LOGFILE, std::ios::out | std::ios::app);
+    if (!logfile.is_open())
+    {
+        std::cerr << "Failed to open log file" << std::endl;
+        exit(1);
+    }
+    else
+    {
+        std::time_t now = std::time(0);
+        logfile << std::ctime(&now) << " " << msg << std::endl;
+        std::cout << std::ctime(&now) << " " << msg << std::endl;
+        logfile.close();
+    }
+}
+
 // Process command from client on the server
 
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
@@ -172,7 +192,9 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
     {
         // TODO: figure out how to connect to other servers
-        std::cout << "Connecting to server: " << tokens[1] << std::endl;
+        // std::cout << "Connecting to server: " << tokens[1] << std::endl;
+        std::string msg = "Connecting to server: " + tokens[1];
+        logMessage(msg);
         clients[clientSocket]->name = tokens[1];
     }
     else if (tokens[0].compare("LEAVE") == 0)
@@ -186,14 +208,16 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     else if (tokens[0].compare("GETMSG") == 0 && tokens.size() == 2)
     {
         std::string msg = "Getting message from group number " + tokens[1];
-        std::cout << msg << std::endl;
+        logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
     else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 3)
     {
         // NOTE: if you dont know this group, forward to the groups you know and let them handle it
-        std::string msg = "Sending '" + tokens[2] + "' to group number " + tokens[1];
-        std::cout << msg << std::endl;
+        // strip newline from tokens[2]
+        std::string clientMsg = tokens[2];
+        std::string msg = "Sending '" + clientMsg + "' to group number " + tokens[1];
+        logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
     else if (tokens[0].compare("LISTSERVERS") == 0)
@@ -206,12 +230,13 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         {
             msg += server.second->name + ", ";
         }
-        std::cout << msg << std::endl;
+        logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
     else
     {
-        std::cout << "Unknown command from client:" << buffer << std::endl;
+        std::string msg = "Unknown command from client: " + std::string(buffer);
+        logMessage(msg);
         send(clientSocket, "Unknown command", 16, 0);
     }
 }
