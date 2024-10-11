@@ -181,16 +181,37 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         send(clientSocket, "Invalid command", 16, 0);
         return;
     }
+
+    std::string input(buffer);
+
+    // Optional: Allow commands without markers, but strip markers if they exist
+    if (input[0] == 0x01)
+    {
+        input.erase(0, 1); // Remove starting 0x01 marker
+    }
+    if (input[input.length() - 1] == 0x04)
+    {
+        input.erase(input.length() - 1); // Remove ending 0x04 marker
+    }
+
+    // Trim any extra whitespaces, newline, etc.
+    input.erase(0, input.find_first_not_of(" \n\r"));
+    input.erase(input.find_last_not_of(" \n\r") + 1);
+
+    std::cout << "Received command: " << input << std::endl;
+
     // Remove the start and end markers
     buffer[strlen(buffer) - 1] = '\0';
 
     // Process the command
     std::vector<std::string> tokens;
     std::string token;
-    std::istringstream stream(buffer + 1);
+    std::istringstream stream(input);
 
     while (std::getline(stream, token, ','))
+    {
         tokens.push_back(token);
+    }
 
     if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
     {
