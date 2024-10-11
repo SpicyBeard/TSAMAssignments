@@ -27,6 +27,7 @@
 #include <sstream>
 #include <thread>
 #include <map>
+#include <poll.h> // Add this for poll()
 
 #include <unistd.h>
 
@@ -38,6 +39,8 @@
 
 #define BACKLOG 5 // Allowed length of queue of waiting connections
 #define LOGFILE "server.log"
+#define MAXSERVERS 8
+#define MINSERVERS 3
 
 // Simple class for handling connections from clients.
 //
@@ -124,28 +127,35 @@ int open_socket(int portno)
 // Close a client's connection, remove it from the client list, and
 // tidy up select sockets afterwards.
 
-void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
+// void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
+// {
+
+//     printf("Client closed connection: %d\n", clientSocket);
+
+//     // If this client's socket is maxfds then the next lowest
+//     // one has to be determined. Socket fd's can be reused by the Kernel,
+//     // so there aren't any nice ways to do this.
+
+//     close(clientSocket);
+
+//     // And remove from the list of open sockets.
+
+//     FD_CLR(clientSocket, openSockets);
+// }
+
+// Close a client's connection and remove it from pollfds
+void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
 {
-
     printf("Client closed connection: %d\n", clientSocket);
-
-    // If this client's socket is maxfds then the next lowest
-    // one has to be determined. Socket fd's can be reused by the Kernel,
-    // so there aren't any nice ways to do this.
-
     close(clientSocket);
 
-    if (*maxfds == clientSocket)
-    {
-        for (auto const &p : clients)
-        {
-            *maxfds = std::max(*maxfds, p.second->sock);
-        }
-    }
-
-    // And remove from the list of open sockets.
-
-    FD_CLR(clientSocket, openSockets);
+    // Remove the socket from the pollfds vector
+    auto it = std::remove_if(pollfds.begin(), pollfds.end(),
+                             [clientSocket](struct pollfd &pfd)
+                             {
+                                 return pfd.fd == clientSocket;
+                             });
+    pollfds.erase(it, pollfds.end());
 }
 
 void logMessage(const std::string &msg)
@@ -171,8 +181,7 @@ void logMessage(const std::string &msg)
 
 // Process command from client on the server
 
-void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
-                   char *buffer)
+void clientCommand(int clientSocket, char *buffer)
 {
     // parse the command. first check if the start is 0x01 and the end is 0x04, if not, ignore the command
     if (buffer[0] != 0x01 || buffer[strlen(buffer) - 1] != 0x04)
@@ -227,7 +236,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         // code to deal with tidying up clients etc. when
         // select() detects the OS has torn down the connection.
 
-        closeClient(clientSocket, openSockets, maxfds);
+        closeClient(clientSocket, *new std::vector<struct pollfd>());
     }
     else if (tokens[0].compare("GETMSG") == 0 && tokens.size() == 2)
     {
@@ -270,15 +279,22 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     }
 }
 
+// Remove fd_set and declare a vector of pollfd instead
+std::vector<struct pollfd> pollfds;
+
+// Helper function to remove client from poll list
+void removeClientFromPoll(int clientSocket)
+{
+    auto it = std::remove_if(pollfds.begin(), pollfds.end(), [clientSocket](struct pollfd &pfd)
+                             { return pfd.fd == clientSocket; });
+    pollfds.erase(it, pollfds.end());
+}
+
 int main(int argc, char *argv[])
 {
     bool finished;
-    int listenSock;       // Socket for connections to server
-    int clientSock;       // Socket of connecting client
-    fd_set openSockets;   // Current open sockets
-    fd_set readSockets;   // Socket list for select()
-    fd_set exceptSockets; // Exception socket list
-    int maxfds;           // Passed to select() as max fd in set
+    int listenSock; // Socket for connections to server
+    int clientSock; // Socket of connecting client
     struct sockaddr_in client;
     socklen_t clientLen;
     char buffer[5000]; // buffer for reading from clients
@@ -290,7 +306,6 @@ int main(int argc, char *argv[])
     }
 
     // Setup socket for server to listen to
-
     listenSock = open_socket(atoi(argv[1]));
     printf("Listening on port: %d\n", atoi(argv[1]));
 
@@ -299,83 +314,108 @@ int main(int argc, char *argv[])
         printf("Listen failed on port %s\n", argv[1]);
         exit(0);
     }
-    else
-    // Add listen socket to socket set we are monitoring
-    {
-        FD_ZERO(&openSockets);
-        FD_SET(listenSock, &openSockets);
-        maxfds = listenSock;
-    }
+
+    // Add listening socket to the pollfds vector
+    struct pollfd listenPollFD;
+    listenPollFD.fd = listenSock;
+    listenPollFD.events = POLLIN; // We are interested in when there's incoming connection
+    pollfds.push_back(listenPollFD);
 
     finished = false;
 
     while (!finished)
     {
-        // Get modifiable copy of readSockets
-        readSockets = exceptSockets = openSockets;
         memset(buffer, 0, sizeof(buffer));
 
-        // Look at sockets and see which ones have something to be read()
-        int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, NULL);
+        // Use poll() instead of select()
+        int n = poll(pollfds.data(), pollfds.size(), -1); // Infinite timeout (-1)
 
         if (n < 0)
         {
-            perror("select failed - closing down\n");
+            perror("poll failed - closing down\n");
             finished = true;
         }
         else
         {
-            // First, accept  any new connections to the server on the listening socket
-            if (FD_ISSET(listenSock, &readSockets))
+            std::vector<size_t> clientsToRemove;
+            // Loop through pollfds to check which file descriptor is ready
+            for (size_t i = 0; i < pollfds.size(); i++)
             {
-                clientSock = accept(listenSock, (struct sockaddr *)&client,
-                                    &clientLen);
-                printf("Hello from Group_42\n");
-
-                send(clientSock, "Helo, <Group_42\n", 21, 0);
-                // Add new client to the list of open sockets
-                FD_SET(clientSock, &openSockets);
-
-                // And update the maximum file descriptor
-                maxfds = std::max(maxfds, clientSock);
-
-                // create a new client to store information.
-                clients[clientSock] = new Client(clientSock);
-
-                // Decrement the number of sockets waiting to be dealt with
-                n--;
-
-                printf("Client connected on server: %d\n", clientSock);
-                printf("Maxfds is now: %d\n", maxfds);
-            }
-            // Now check for commands from clients
-            std::list<Client *> disconnectedClients;
-            while (n-- > 0)
-            {
-                for (auto const &pair : clients)
+                if (pollfds[i].fd == listenSock && (pollfds[i].revents & POLLIN))
                 {
-                    Client *client = pair.second;
-
-                    if (FD_ISSET(client->sock, &readSockets))
+                    if (pollfds.size() - 1 >= MAXSERVERS)
                     {
-                        // recv() == 0 means client has closed connection
-                        if (recv(client->sock, buffer, sizeof(buffer), MSG_DONTWAIT) == 0)
+                        printf("Maximum number of clients reached. Refusing new connection.\n");
+                        int tempSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
+                        if (tempSock > 0)
                         {
-                            disconnectedClients.push_back(client);
-                            closeClient(client->sock, &openSockets, &maxfds);
-                        }
-                        // We don't check for -1 (nothing received) because select()
-                        // only triggers if there is something on the socket for us.
-                        else
-                        {
-                            std::cout << buffer << std::endl;
-                            clientCommand(client->sock, &openSockets, &maxfds, buffer);
+                            send(tempSock, "Server full. Connection refused.\n", 35, 0);
+                            close(tempSock);
                         }
                     }
+                    else
+                        // Check if it's the listening socket (new connection)
+                        clientSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
+                    if (clientSock > 0)
+                    {
+                        printf("Hello from Group_42\n");
+                        send(clientSock, "Helo, <Group_42>\n", 21, 0);
+                        printf("Client connected on server: %d\n", clientSock);
+
+                        // Add new client to the pollfds vector
+                        struct pollfd newClientPollFD;
+                        newClientPollFD.fd = clientSock;
+                        newClientPollFD.events = POLLIN; // We want to read from this socket
+                        pollfds.push_back(newClientPollFD);
+
+                        // Create a new client entry in the clients map
+                        clients[clientSock] = new Client(clientSock);
+                    }
                 }
-                // Remove client from the clients list
-                for (auto const &c : disconnectedClients)
-                    clients.erase(c->sock);
+                // Check if an existing client has sent data
+                else if (pollfds[i].revents & POLLIN)
+                {
+                    int clientSock = pollfds[i].fd;
+                    int bytesReceived = recv(clientSock, buffer, sizeof(buffer), 0);
+
+                    if (bytesReceived == 0)
+                    {
+                        // Client has disconnected
+                        printf("Client disconnected: %d\n", clientSock);
+                        closeClient(clientSock, pollfds);
+                        clientsToRemove.push_back(i);
+                        if (clients.find(clientSock) != clients.end())
+                        {
+                            delete clients[clientSock];
+                            clients.erase(clientSock);
+                        }
+                        // removeClientFromPoll(clientSock); // Remove from poll list
+                        // clients.erase(clientSock); // Remove from clients map
+                    }
+                    else if (bytesReceived > 0)
+                    {
+                        // Process the command from the client
+                        clientCommand(clientSock, buffer);
+                    }
+                }
+                // Check for errors or disconnection
+                else if (pollfds[i].revents & (POLLERR | POLLHUP))
+                {
+                    int clientSock = pollfds[i].fd;
+                    printf("Client disconnected due to error: %d\n", clientSock);
+                    closeClient(clientSock, pollfds);
+                    // removeClientFromPoll(clientSock); // Remove from poll list
+                    clientsToRemove.push_back(i);
+                    if (clients.find(clientSock) != clients.end())
+                    {
+                        delete clients[clientSock];
+                        clients.erase(clientSock);
+                    }
+                }
+            }
+            for (size_t i : clientsToRemove)
+            {
+                pollfds.erase(pollfds.begin() + i);
             }
         }
     }
