@@ -49,9 +49,11 @@ void listenServer(int serverSocket)
         }
         else if (nread > 0)
         {
-            time_t timestamp;
-            time(&timestamp);
-            std::cout << "Received: " << buffer << "--" << ctime(&timestamp) << std::endl;
+            std::time_t now = std::time(0);
+            char timeStr[100];
+            std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+
+            std::cout << timeStr << " : " << buffer << std::endl;
         }
     }
 }
@@ -137,9 +139,10 @@ int main(int argc, char *argv[])
         messageServer[strlen(buffer) + 1] = 0x04;
 
         nwrite = send(serverSocket, messageServer, strlen(messageServer), 0);
-        time_t timestamp;
-        time(&timestamp);
-        std::cout << "sending: " << buffer << "--" << ctime(&timestamp) << std::endl;
+        std::time_t now = std::time(0);
+        char timeStr[100];
+        std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+        std::cout << timeStr << " : " << buffer << std::endl;
 
         if (nwrite == -1)
         {
