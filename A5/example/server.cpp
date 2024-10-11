@@ -160,8 +160,11 @@ void logMessage(const std::string &msg)
     else
     {
         std::time_t now = std::time(0);
-        logfile << std::ctime(&now) << " " << msg << std::endl;
-        std::cout << std::ctime(&now) << " " << msg << std::endl;
+        char timeStr[100];
+        std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+
+        logfile << timeStr << ": " << msg << std::endl;
+        std::cout << timeStr << ": " << msg << std::endl;
         logfile.close();
     }
 }
@@ -214,9 +217,14 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 3)
     {
         // NOTE: if you dont know this group, forward to the groups you know and let them handle it
-        // strip newline from tokens[2]
-        std::string clientMsg = tokens[2];
-        std::string msg = "Sending '" + clientMsg + "' to group number " + tokens[1];
+        std::string sanitizedToken2 = tokens[2];
+        size_t pos = sanitizedToken2.find('\n');
+        if (pos != std::string::npos)
+        {
+            sanitizedToken2.erase(pos, 1);
+        }
+
+        std::string msg = "Sending '" + sanitizedToken2 + "' to group number " + tokens[1];
         logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
