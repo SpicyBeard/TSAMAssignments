@@ -1,0 +1,129 @@
+No.     Time           Source                Destination           Protocol Length Info
+    184 4.961763391    127.0.0.1             127.0.0.1             TCP      74     38814 → 4042 [SYN] Seq=0 Win=65495 Len=0 MSS=65495 SACK_PERM=1 TSval=3089656977 TSecr=0 WS=128
+
+Frame 184: 74 bytes on wire (592 bits), 74 bytes captured (592 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 38814, Dst Port: 4042, Seq: 0, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+    185 4.962301097    127.0.0.1             127.0.0.1             TCP      74     4042 → 38814 [SYN, ACK] Seq=0 Ack=1 Win=65483 Len=0 MSS=65495 SACK_PERM=1 TSval=3089656978 TSecr=3089656977 WS=128
+
+Frame 185: 74 bytes on wire (592 bits), 74 bytes captured (592 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 4042, Dst Port: 38814, Seq: 0, Ack: 1, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+    186 4.962327427    127.0.0.1             127.0.0.1             TCP      66     38814 → 4042 [ACK] Seq=1 Ack=1 Win=65536 Len=0 TSval=3089656978 TSecr=3089656978
+
+Frame 186: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 38814, Dst Port: 4042, Seq: 1, Ack: 1, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+    187 4.962649910    127.0.0.1             127.0.0.1             TCP      87     4042 → 38814 [PSH, ACK] Seq=1 Ack=1 Win=65536 Len=21 TSval=3089656978 TSecr=3089656978
+
+Frame 187: 87 bytes on wire (696 bits), 87 bytes captured (696 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 4042, Dst Port: 38814, Seq: 1, Ack: 1, Len: 21
+Data (21 bytes)
+
+0000  48 65 6c 6f 2c 20 3c 47 72 6f 75 70 5f 34 32 0a   Helo, <Group_42.
+0010  00 00 00 00 00                                    .....
+
+No.     Time           Source                Destination           Protocol Length Info
+    188 4.962659378    127.0.0.1             127.0.0.1             TCP      66     38814 → 4042 [ACK] Seq=1 Ack=22 Win=65536 Len=0 TSval=3089656978 TSecr=3089656978
+
+Frame 188: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 38814, Dst Port: 4042, Seq: 1, Ack: 22, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+    380 8.769692539    127.0.0.1             127.0.0.1             TCP      80     38814 → 4042 [PSH, ACK] Seq=1 Ack=22 Win=65536 Len=14 TSval=3089660785 TSecr=3089656978
+
+Frame 380: 80 bytes on wire (640 bits), 80 bytes captured (640 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 38814, Dst Port: 4042, Seq: 1, Ack: 22, Len: 14
+Data (14 bytes)
+
+0000  01 43 4f 4e 4e 45 43 54 2c 31 32 33 0a 04         .CONNECT,123..
+
+No.     Time           Source                Destination           Protocol Length Info
+    381 8.769733817    127.0.0.1             127.0.0.1             TCP      66     4042 → 38814 [ACK] Seq=22 Ack=15 Win=65536 Len=0 TSval=3089660785 TSecr=3089660785
+
+Frame 381: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 4042, Dst Port: 38814, Seq: 22, Ack: 15, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+   1054 18.587580900   127.0.0.1             127.0.0.1             TCP      100    38814 → 4042 [PSH, ACK] Seq=15 Ack=22 Win=65536 Len=34 TSval=3089670603 TSecr=3089660785
+
+Frame 1054: 100 bytes on wire (800 bits), 100 bytes captured (800 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 38814, Dst Port: 4042, Seq: 15, Ack: 22, Len: 34
+Data (34 bytes)
+
+0000  01 53 45 4e 44 4d 53 47 2c 31 32 33 2c 20 54 68   .SENDMSG,123, Th
+0010  69 73 20 69 73 20 61 20 6d 65 73 73 61 67 65 2e   is is a message.
+0020  0a 04                                             ..
+
+No.     Time           Source                Destination           Protocol Length Info
+   1055 18.587587642   127.0.0.1             127.0.0.1             TCP      66     4042 → 38814 [ACK] Seq=22 Ack=49 Win=65536 Len=0 TSval=3089670603 TSecr=3089670603
+
+Frame 1055: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 4042, Dst Port: 38814, Seq: 22, Ack: 49, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+   1056 18.587892527   127.0.0.1             127.0.0.1             TCP      115    4042 → 38814 [PSH, ACK] Seq=22 Ack=49 Win=65536 Len=49 TSval=3089670604 TSecr=3089670603
+
+Frame 1056: 115 bytes on wire (920 bits), 115 bytes captured (920 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 4042, Dst Port: 38814, Seq: 22, Ack: 49, Len: 49
+Data (49 bytes)
+
+0000  53 65 6e 64 69 6e 67 20 27 20 54 68 69 73 20 69   Sending ' This i
+0010  73 20 61 20 6d 65 73 73 61 67 65 2e 27 20 74 6f   s a message.' to
+0020  20 67 72 6f 75 70 20 6e 75 6d 62 65 72 20 31 32    group number 12
+0030  33                                                3
+
+No.     Time           Source                Destination           Protocol Length Info
+   1057 18.587898969   127.0.0.1             127.0.0.1             TCP      66     38814 → 4042 [ACK] Seq=49 Ack=71 Win=65536 Len=0 TSval=3089670604 TSecr=3089670604
+
+Frame 1057: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 38814, Dst Port: 4042, Seq: 49, Ack: 71, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+   1156 21.750502881   127.0.0.1             127.0.0.1             TCP      66     38814 → 4042 [FIN, ACK] Seq=49 Ack=71 Win=65536 Len=0 TSval=3089673766 TSecr=3089670604
+
+Frame 1156: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 38814, Dst Port: 4042, Seq: 49, Ack: 71, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+   1157 21.750674984   127.0.0.1             127.0.0.1             TCP      66     4042 → 38814 [FIN, ACK] Seq=71 Ack=50 Win=65536 Len=0 TSval=3089673766 TSecr=3089673766
+
+Frame 1157: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 4042, Dst Port: 38814, Seq: 71, Ack: 50, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+   1158 21.750688309   127.0.0.1             127.0.0.1             TCP      66     38814 → 4042 [ACK] Seq=50 Ack=72 Win=65536 Len=0 TSval=3089673766 TSecr=3089673766
+
+Frame 1158: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+Transmission Control Protocol, Src Port: 38814, Dst Port: 4042, Seq: 50, Ack: 72, Len: 0
