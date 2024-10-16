@@ -3,7 +3,7 @@
 //
 // Command line: ./chat_server 4000
 //
-// Author: Jacky Mallett (jacky@ru.is)
+// Author: Lovisa & Dadi -- lovisa21@ru.is  -- dadir21@ru.is
 //
 #include <stdio.h>
 #include <errno.h>
@@ -30,6 +30,7 @@
 #include <poll.h> // Add this for poll()
 
 #include <unistd.h>
+#include "utils.h"
 
 // fix SOCK_NONBLOCK for OSX
 #ifndef SOCK_NONBLOCK
@@ -158,80 +159,31 @@ void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
     pollfds.erase(it, pollfds.end());
 }
 
-void logMessage(const std::string &msg)
-{
-    std::ofstream logfile;
-    logfile.open(LOGFILE, std::ios::out | std::ios::app);
-    if (!logfile.is_open())
-    {
-        std::cerr << "Failed to open log file" << std::endl;
-        exit(1);
-    }
-    else
-    {
-        std::time_t now = std::time(0);
-        char timeStr[100];
-        std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-
-        logfile << timeStr << ": " << msg << std::endl;
-        std::cout << timeStr << ": " << msg << std::endl;
-        logfile.close();
-    }
-}
-
 // Process command from client on the server
 
 void clientCommand(int clientSocket, char *buffer)
 {
-    // parse the command. first check if the start is 0x01 and the end is 0x04, if not, ignore the command
-    if (buffer[0] != 0x01 || buffer[strlen(buffer) - 1] != 0x04)
+    if (buffer == NULL)
     {
-        std::cout << "Invalid command from client" << std::endl;
-        send(clientSocket, "Invalid command", 16, 0);
         return;
     }
+    std::vector<std::string> tokens = checkMessageContentAndProcess(buffer);
 
-    std::string input(buffer);
-
-    // Optional: Allow commands without markers, but strip markers if they exist
-    if (input[0] == 0x01)
+    if (tokens.size() == 0)
     {
-        input.erase(0, 1); // Remove starting 0x01 marker
-    }
-    if (input[input.length() - 1] == 0x04)
-    {
-        input.erase(input.length() - 1); // Remove ending 0x04 marker
-    }
-
-    // Trim any extra whitespaces, newline, etc.
-    input.erase(0, input.find_first_not_of(" \n\r"));
-    input.erase(input.find_last_not_of(" \n\r") + 1);
-
-    std::cout << "Received command: " << input << std::endl;
-
-    // Remove the start and end markers
-    buffer[strlen(buffer) - 1] = '\0';
-
-    // Process the command
-    std::vector<std::string> tokens;
-    std::string token;
-    std::istringstream stream(input);
-
-    while (std::getline(stream, token, ','))
-    {
-        tokens.push_back(token);
+        // TODO change log to include ip , port and name
+        logMessage("Invalid command from :" + std::to_string(clientSocket));
+        return;
     }
 
     // TODO: figure out how to connect to other servers
     // std::cout << "Connecting to server: " << tokens[1] << std::endl;
 
-    if (tokens[0].compare("LEAVE") == 0)
+    if (tokens[0].compare("HELO") == 0 && tokens.size() == 2)
     {
         // Close the socket, and leave the socket handling
         // code to deal with tidying up clients etc. when
         // select() detects the OS has torn down the connection.
-
-        closeClient(clientSocket, *new std::vector<struct pollfd>());
     }
     else if (tokens[0].compare("GETMSG") == 0 && tokens.size() == 2)
     {
@@ -255,7 +207,6 @@ void clientCommand(int clientSocket, char *buffer)
     }
     else if (tokens[0].compare("LISTSERVERS") == 0)
     {
-        // TODO: for some reason, this is an unknown command
         // TODO: figure out how to list all servers we are connected to
         std::string msg = "Listing all servers we are connected to: ";
         ;
@@ -361,20 +312,15 @@ int main(int argc, char *argv[])
                     }
                     if (clientSock > 0)
                     {
-                        // int bytesRecieved = recv(clientSock, buffer, sizeof(buffer), 0);
-                        // if (bytesRecieved > 0)
-                        // {
-                        //     if (buffer[0] != 0x01 || buffer[strlen(buffer) - 1] != 0x04)
-                        //     {
-                        //     }
-                        //     else
-                        //     {
-                        //     }
-                        // }
-                        // else
-                        // {
-                        //     printf("Failed to receive message from client\n");
-                        // }
+                        int bytesRecieved = recv(clientSock, buffer, sizeof(buffer), 0);
+                        if (bytesRecieved > 0)
+                        {
+                            clientCommand(clientSock, buffer);
+                        }
+                        else
+                        {
+                            printf("Failed to receive message from client\n");
+                        }
 
                         printf("Helo from Group_42\n");
                         send(clientSock, "Helo, A5_42\n", 21, 0);
