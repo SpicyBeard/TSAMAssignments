@@ -222,15 +222,10 @@ void clientCommand(int clientSocket, char *buffer)
         tokens.push_back(token);
     }
 
-    if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
-    {
-        // TODO: figure out how to connect to other servers
-        // std::cout << "Connecting to server: " << tokens[1] << std::endl;
-        std::string msg = "Connecting to server: " + tokens[1];
-        logMessage(msg);
-        clients[clientSocket]->name = tokens[1];
-    }
-    else if (tokens[0].compare("LEAVE") == 0)
+    // TODO: figure out how to connect to other servers
+    // std::cout << "Connecting to server: " << tokens[1] << std::endl;
+
+    if (tokens[0].compare("LEAVE") == 0)
     {
         // Close the socket, and leave the socket handling
         // code to deal with tidying up clients etc. when
@@ -266,14 +261,19 @@ void clientCommand(int clientSocket, char *buffer)
         ;
         for (auto server : clients)
         {
-            msg += server.second->name + ", ";
+            msg += server.second->name + ": " + std::to_string(server.second->sock) + ", ";
         }
         logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
     else
     {
-        std::string msg = "Unknown command from client: " + std::string(buffer);
+        std::string command;
+        for (auto token : tokens)
+        {
+            command += token + " ";
+        }
+        std::string msg = "Unknown command from client: " + command;
         logMessage(msg);
         send(clientSocket, "Unknown command", 16, 0);
     }
@@ -354,12 +354,30 @@ int main(int argc, char *argv[])
                         }
                     }
                     else
+                    {
+
                         // Check if it's the listening socket (new connection)
                         clientSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
+                    }
                     if (clientSock > 0)
                     {
-                        printf("Hello from Group_42\n");
-                        send(clientSock, "Helo, <Group_42>\n", 21, 0);
+                        // int bytesRecieved = recv(clientSock, buffer, sizeof(buffer), 0);
+                        // if (bytesRecieved > 0)
+                        // {
+                        //     if (buffer[0] != 0x01 || buffer[strlen(buffer) - 1] != 0x04)
+                        //     {
+                        //     }
+                        //     else
+                        //     {
+                        //     }
+                        // }
+                        // else
+                        // {
+                        //     printf("Failed to receive message from client\n");
+                        // }
+
+                        printf("Helo from Group_42\n");
+                        send(clientSock, "Helo, A5_42\n", 21, 0);
                         printf("Client connected on server: %d\n", clientSock);
 
                         // Add new client to the pollfds vector
