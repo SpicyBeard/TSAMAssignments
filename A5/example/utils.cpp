@@ -1,7 +1,9 @@
 #include "utils.h"
 
-string checkMessageContent(char *buffer, int clientSocket)
+vector<string> checkMessageContentAndProcess(char *buffer)
 {
+
+    vector<string> tokens;
     if (buffer[0] == 0x01 && buffer[strlen(buffer) - 1] == 0x04)
     {
         string input(buffer);
@@ -13,9 +15,16 @@ string checkMessageContent(char *buffer, int clientSocket)
         // Trim any extra whitespaces, newline, etc.
         input.erase(0, input.find_first_not_of(" \n\r"));
         input.erase(input.find_last_not_of(" \n\r") + 1);
-        return input;
+        string token;
+        istringstream stream(input);
+
+        while (getline(stream, token, ','))
+        {
+            tokens.push_back(token);
+        }
+        return tokens;
     }
-    return "";
+    return tokens;
 }
 
 void logMessage(const std::string &msg)

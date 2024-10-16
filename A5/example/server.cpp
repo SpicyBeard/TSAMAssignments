@@ -163,40 +163,27 @@ void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
 
 void clientCommand(int clientSocket, char *buffer)
 {
+    if (buffer == NULL)
+    {
+        return;
+    }
+    std::vector<std::string> tokens = checkMessageContentAndProcess(buffer);
 
-    std::string input = checkMessageContent(buffer, clientSocket);
-
-    if (input.empty())
+    if (tokens.size() == 0)
     {
         // TODO change log to include ip , port and name
         logMessage("Invalid command from :" + std::to_string(clientSocket));
-    }
-
-    std::cout << "Received command: " << input << std::endl;
-
-    // Remove the start and end markers
-    buffer[strlen(buffer) - 1] = '\0';
-
-    // Process the command
-    std::vector<std::string> tokens;
-    std::string token;
-    std::istringstream stream(input);
-
-    while (std::getline(stream, token, ','))
-    {
-        tokens.push_back(token);
+        return;
     }
 
     // TODO: figure out how to connect to other servers
     // std::cout << "Connecting to server: " << tokens[1] << std::endl;
 
-    if (tokens[0].compare("LEAVE") == 0)
+    if (tokens[0].compare("HELO") == 0 && tokens.size() == 2)
     {
         // Close the socket, and leave the socket handling
         // code to deal with tidying up clients etc. when
         // select() detects the OS has torn down the connection.
-
-        closeClient(clientSocket, *new std::vector<struct pollfd>());
     }
     else if (tokens[0].compare("GETMSG") == 0 && tokens.size() == 2)
     {
@@ -220,7 +207,6 @@ void clientCommand(int clientSocket, char *buffer)
     }
     else if (tokens[0].compare("LISTSERVERS") == 0)
     {
-        // TODO: for some reason, this is an unknown command
         // TODO: figure out how to list all servers we are connected to
         std::string msg = "Listing all servers we are connected to: ";
         ;
@@ -329,12 +315,7 @@ int main(int argc, char *argv[])
                         int bytesRecieved = recv(clientSock, buffer, sizeof(buffer), 0);
                         if (bytesRecieved > 0)
                         {
-                            if (buffer[0] != 0x01 || buffer[strlen(buffer) - 1] != 0x04)
-                            {
-                            }
-                            else
-                            {
-                            }
+                            clientCommand(clientSock, buffer);
                         }
                         else
                         {
