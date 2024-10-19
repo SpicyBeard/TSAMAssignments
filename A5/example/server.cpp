@@ -46,11 +46,24 @@
 // Simple class for handling connections from clients.
 //
 // Client(int socket) - socket to send/receive traffic from client.
+
+class Messages
+{
+public:
+    std::string message;
+    std::string from;
+    std::string to;
+    std::string timestamp;
+};
+
 class Client
 {
 public:
     int sock;         // socket of client connection
     std::string name; // Limit length of name of client's user
+    std::string ip_address;
+    int port;
+    std::vector<Client *> servers; // List of servers this client is connected to
 
     Client(int socket) : sock(socket) {}
 
@@ -181,16 +194,55 @@ void clientCommand(int clientSocket, char *buffer)
 
     if (tokens[0].compare("HELO") == 0 && tokens.size() == 2)
     {
-        // Close the socket, and leave the socket handling
-        // code to deal with tidying up clients etc. when
-        // select() detects the OS has torn down the connection.
+        // HELO,<FROM GROUP ID>
+        // tokens[1] should be A5_[number] or Inst_[number], if anything else, disconnect
+        clients[clientSocket]->name = tokens[1];
+        // send back HELO text
     }
-    else if (tokens[0].compare("GETMSG") == 0 && tokens.size() == 2)
+    else if (tokens[0].compare("SERVERS") == 0)
     {
+        // SERVERS,A5 1,130.208.243.61,8888;A5 2,10.2.132.12,10042;
+        // handle the list of servers
+        // reply with SERVERS
+    }
+    else if (tokens[0].compare("KEEPALIVE") == 0)
+    {
+        // KEEPALIVE,<No. of Messages>
+    }
+    else if (tokens[0].compare("GETMSGS") == 0 && tokens.size() == 2)
+    {
+        // GETMSGS,<GROUP ID>
+        // check if groupid is valid
         std::string msg = "Getting message from group number " + tokens[1];
         logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
+    else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 4)
+    {
+        // SENDMSG,<TO GROUP ID>,<FROM GROUP ID>,<Message content>
+        // NOTE: if you dont know this group, forward to the groups you know and let them handle it
+        std::string sanitizedToken2 = tokens[2];
+        size_t pos = sanitizedToken2.find('\n');
+        if (pos != std::string::npos)
+        {
+            sanitizedToken2.erase(pos, 1);
+        }
+
+        std::string msg = "Sending '" + sanitizedToken2 + "' from group " + tokens[2] + " to group number " + tokens[1];
+        logMessage(msg);
+        send(clientSocket, msg.c_str(), msg.length(), 0);
+    }
+    else if (tokens[0].compare("STATUSREQ") == 0)
+    {
+        // reply with STATUSRESP
+    }
+    else if (tokens[0].compare("STATUSRESP") == 0)
+    {
+        // STATUSRESP,<server, msgs held>,...
+        // eg. STATUSRESP,A5 4,20,A5 71,2
+        // handle the status response
+    }
+    // From client
     else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 3)
     {
         // NOTE: if you dont know this group, forward to the groups you know and let them handle it
@@ -202,6 +254,12 @@ void clientCommand(int clientSocket, char *buffer)
         }
 
         std::string msg = "Sending '" + sanitizedToken2 + "' to group number " + tokens[1];
+        logMessage(msg);
+        send(clientSocket, msg.c_str(), msg.length(), 0);
+    }
+    else if (tokens[0].compare("GETMSG") == 0 && tokens.size() == 2)
+    {
+        std::string msg = "Getting message from group number " + tokens[1];
         logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
@@ -315,6 +373,10 @@ int main(int argc, char *argv[])
                         int bytesRecieved = recv(clientSock, buffer, sizeof(buffer), 0);
                         if (bytesRecieved > 0)
                         {
+                            // Create a new client entry in the clients map
+                            clients[clientSock] = new Client(clientSock);
+                            clients[clientSock]->ip_address = inet_ntoa(client.sin_addr);
+                            clients[clientSock]->port = ntohs(client.sin_port);
                             clientCommand(clientSock, buffer);
                         }
                         else
@@ -322,18 +384,15 @@ int main(int argc, char *argv[])
                             printf("Failed to receive message from client\n");
                         }
 
-                        printf("Helo from Group_42\n");
-                        send(clientSock, "Helo, A5_42\n", 21, 0);
-                        printf("Client connected on server: %d\n", clientSock);
+                        // printf("Helo from Group_42\n");
+                        // send(clientSock, "Helo, A5_42\n", 21, 0);
+                        // printf("Client connected on server: %d\n", clientSock);
 
                         // Add new client to the pollfds vector
                         struct pollfd newClientPollFD;
                         newClientPollFD.fd = clientSock;
                         newClientPollFD.events = POLLIN; // We want to read from this socket
                         pollfds.push_back(newClientPollFD);
-
-                        // Create a new client entry in the clients map
-                        clients[clientSock] = new Client(clientSock);
                     }
                 }
                 // Check if an existing client has sent data
