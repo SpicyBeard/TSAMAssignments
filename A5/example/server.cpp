@@ -45,24 +45,10 @@
 
 #define MAXMISBEHAVIOUR 5
 
-// Simple class for handling connections from clients.
-//
-// Client(int socket) - socket to send/receive traffic from client.
-
-// Note: map is not necessarily the most efficient method to use here,
-// especially for a server with large numbers of simulataneous connections,
-// where performance is also expected to be an issue.
-//
-// Quite often a simple array can be used as a lookup table,
-// (indexed on socket no.) sacrificing memory for speed.
-
 std::map<int, Client *> clients;    // Lookup table for per Client information
 int main_client = -1;               // Main client socket
 std::vector<Message> messageVector; // List of messages
-
-// Open socket for specified port.
-//
-// Returns -1 if unable to create the socket for any reason.
+std::map<string, int> messageMap;   // Map of messages
 
 int open_socket(int portno)
 {
@@ -118,25 +104,6 @@ int open_socket(int portno)
         return (sock);
     }
 }
-
-// Close a client's connection, remove it from the client list, and
-// tidy up select sockets afterwards.
-
-// void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
-// {
-
-//     printf("Client closed connection: %d\n", clientSocket);
-
-//     // If this client's socket is maxfds then the next lowest
-//     // one has to be determined. Socket fd's can be reused by the Kernel,
-//     // so there aren't any nice ways to do this.
-
-//     close(clientSocket);
-
-//     // And remove from the list of open sockets.
-
-//     FD_CLR(clientSocket, openSockets);
-// }
 
 // Close a client's connection and remove it from pollfds
 void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
@@ -231,7 +198,7 @@ void clientCommand(int clientSocket, char *buffer)
         logMessage("Sending conencted server list to " + client.name + " at " + client.ip_address + ":" + std::to_string(client.port));
         sendMessage(*clients[clientSocket], response);
     }
-    else if (tokens[0].compare("KEEPALIVE") == 0)
+    else if (tokens[0].compare("KEEPALIVE") == 0 && connectedClient(clientSocket, clients))
     {
         // KEEPALIVE,<No. of Messages>
         std::string msg = "Received keepalive message from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + ":" + std::to_string(clients[clientSocket]->port) + " with " + tokens[1] + " messages";
@@ -243,7 +210,7 @@ void clientCommand(int clientSocket, char *buffer)
             sendMessage(clientSocket, "GETMSGS,A5_42");
         }
     }
-    else if (tokens[0].compare("GETMSGS") == 0 && tokens.size() == 2)
+    else if (tokens[0].compare("GETMSGS") == 0 && tokens.size() == 2 && connectedClient(clientSocket, clients))
     {
         // GETMSGS,<GROUP ID>
         // check if groupid is valid
@@ -259,7 +226,7 @@ void clientCommand(int clientSocket, char *buffer)
             }
         }
     }
-    else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 4)
+    else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 4 && connectedClient(clientSocket, clients))
     {
 
         if (tokens[1] == "A5_42")
@@ -275,17 +242,51 @@ void clientCommand(int clientSocket, char *buffer)
             strftime(timeStr, sizeof(timeStr), "%d-%m-%Y", localtime(&now));
             Message message = Message(tokens[3], tokens[2], tokens[1], timeStr);
             messageVector.push_back(message);
+            if (messageMap.find(tokens[1]) == messageMap.end())
+            {
+                messageMap[tokens[1]] = 1;
+            }
+            else
+            {
+                messageMap[tokens[1]]++;
+            }
         }
     }
-    else if (tokens[0].compare("STATUSREQ") == 0)
+    else if (tokens[0].compare("STATUSREQ") == 0 && connectedClient(clientSocket, clients))
     {
         // reply with STATUSRESP
+        logMessage("Received status request from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + ":" + std::to_string(clients[clientSocket]->port));
+        std::string response = "STATUSRESP,";
+        for (auto message : messageMap)
+        {
+            response += message.first + "," + std::to_string(message.second) + ",";
+        }
+        logMessage("Sending status response to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + ":" + std::to_string(clients[clientSocket]->port));
+        sendMessage(*clients[clientSocket], response);
     }
-    else if (tokens[0].compare("STATUSRESP") == 0)
+    else if (tokens[0].compare("STATUSRESP") == 0 && tokens.size() >= 1 && connectedClient(clientSocket, clients))
     {
-        // STATUSRESP,<server, msgs held>,...
-        // eg. STATUSRESP,A5 4,20,A5 71,2
-        // handle the status response
+        Client *server = clients[clientSocket];
+        logMessage("Received status response from " + server->name + " at " + server->ip_address + ":" + std::to_string(server->port));
+        for (int i = 1; i < tokens.size(); i += 2)
+        {
+            if (tokens[i] == "A5_42")
+            {
+                logMessage("Sending GETMSGS to " + server->name + " at " + server->ip_address + ":" + std::to_string(server->port) + " for " + tokens[i + 1]);
+                sendMessage(clientSocket, "GETMSGS,A5_42");
+            }
+            else
+            {
+                for (auto client : clients)
+                {
+                    if (client.second->name == tokens[i])
+                    {
+                        logMessage("Sending GETMSGS to " + server->name + " at " + server->ip_address + ":" + std::to_string(server->port) + " for " + tokens[i + 1]);
+                        sendMessage(clientSocket, ("GETMSGS," + tokens[i]).c_str());
+                    }
+                }
+            }
+        }
     }
     // From client
     else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 3 && main_client == clientSocket)
