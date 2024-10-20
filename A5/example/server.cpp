@@ -179,7 +179,15 @@ void clientCommand(int clientSocket, char *buffer)
     // TODO: figure out how to connect to other servers
     // std::cout << "Connecting to server: " << tokens[1] << std::endl;
 
-    if (tokens[0].compare("HELO") == 0 && tokens.size() == 2)
+    if (tokens[0].compare("Rattatoskur") == 0)
+    {
+        std::string msg = "Client connected to Server";
+        logMessage(msg);
+        send(clientSocket, msg.c_str(), msg.length(), 0);
+    }
+    else
+
+        if (tokens[0].compare("HELO") == 0 && tokens.size() == 2)
     {
         // Close the socket, and leave the socket handling
         // code to deal with tidying up clients etc. when
@@ -271,6 +279,18 @@ int main(int argc, char *argv[])
     listenPollFD.fd = listenSock;
     listenPollFD.events = POLLIN; // We are interested in when there's incoming connection
     pollfds.push_back(listenPollFD);
+
+    // establish minimum connections to begin server
+    while (pollfds.size() - 1 < MINSERVERS)
+    {
+        printf("Waiting for minimum servers to connect\n");
+        int tempSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
+        if (tempSock > 0)
+        {
+            send(tempSock, "Server full. Connection refused.\n", 35, 0);
+            close(tempSock);
+        }
+    }
 
     finished = false;
 
