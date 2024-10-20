@@ -3,10 +3,10 @@ CXX = g++
 CXXFLAGS = -std=c++11 -Wall -Wextra
 
 # Targets
-TARGETS = server client
+TARGETS = tsamgroup42 client
 
 # Source files
-SERVER_SRC = server.cpp utils.cpp utils.h
+SERVER_SRC = tsamgroup42.cpp utils.cpp utils.h
 CLIENT_SRC = client.cpp
 
 # Object files
@@ -17,7 +17,7 @@ CLIENT_OBJ = $(CLIENT_SRC:.cpp=.o)
 all: $(TARGETS)
 
 # Scanner target
-server: $(SERVER_OBJ)
+tsamgroup42: $(SERVER_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 # Puzzlesolver target
@@ -31,6 +31,6 @@ clean:
 # Dependencies
 client.o: client.cpp
 utils.o: utils.cpp utils.h
-server.o: server.cpp utils.h
+tsamgroup42.o: tsamgroup42.cpp utils.h
 
 .PHONY: all clean

@@ -127,3 +127,66 @@ bool connectedClient(int sock, map<int, Client *> &clients)
     }
     return false;
 }
+
+int open_socket(int portno, string ip)
+{
+    struct sockaddr_in sk_addr; // address settings for bind()
+    int sock;                   // socket opened for this port
+    int set = 1;                // for setsockopt
+
+    // Create socket for connection. Set to be non-blocking, so recv will
+    // return immediately if there isn't anything waiting to be read.
+#ifdef __APPLE__
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        perror("Failed to open socket");
+        return (-1);
+    }
+#else
+    if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
+    {
+        perror("Failed to open socket");
+        return (-1);
+    }
+#endif
+
+    // Turn on SO_REUSEADDR to allow socket to be quickly reused after
+    // program exit.
+
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &set, sizeof(set)) < 0)
+    {
+        perror("Failed to set SO_REUSEADDR:");
+    }
+    set = 1;
+#ifdef __APPLE__
+    if (setsockopt(sock, SOL_SOCKET, SOCK_NONBLOCK, &set, sizeof(set)) < 0)
+    {
+        perror("Failed to set SOCK_NOBBLOCK");
+    }
+#endif
+
+    memset(&sk_addr, 0, sizeof(sk_addr));
+
+    sk_addr.sin_family = AF_INET;
+    if (ip == "")
+    {
+        sk_addr.sin_addr.s_addr = INADDR_ANY;
+    }
+    else
+    {
+        sk_addr.sin_addr.s_addr = inet_addr(ip.c_str());
+    }
+    sk_addr.sin_port = htons(portno);
+
+    // Bind to socket to listen for connections from clients
+
+    if (bind(sock, (struct sockaddr *)&sk_addr, sizeof(sk_addr)) < 0)
+    {
+        perror("Failed to bind to socket:");
+        return (-1);
+    }
+    else
+    {
+        return (sock);
+    }
+}
