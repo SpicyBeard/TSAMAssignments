@@ -26,13 +26,15 @@
 
 using namespace std;
 
-class Messages
+class Message
 {
 public:
     std::string message;
     std::string from;
     std::string to;
     std::string timestamp;
+
+    Message(std::string message, std::string from, std::string to, std::string timestamp) : message(message), from(from), to(to), timestamp(timestamp) {}
 };
 
 class Client
@@ -58,7 +60,7 @@ bool valid_id(string id, map<int, Client *> &clients);
 
 vector<string> checkMessageContentAndProcess(char *buffer);
 
-void logMessage(const std::string &msg);
+void logMessage(const std::string &msg, std::string filename = "");
 
 bool connectedClient(int sock, map<int, Client *> &clients);
 

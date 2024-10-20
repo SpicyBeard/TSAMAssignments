@@ -56,8 +56,9 @@
 // Quite often a simple array can be used as a lookup table,
 // (indexed on socket no.) sacrificing memory for speed.
 
-std::map<int, Client *> clients; // Lookup table for per Client information
-int main_client = -1;            // Main client socket
+std::map<int, Client *> clients;    // Lookup table for per Client information
+int main_client = -1;               // Main client socket
+std::vector<Message> messageVector; // List of messages
 
 // Open socket for specified port.
 //
@@ -246,24 +247,35 @@ void clientCommand(int clientSocket, char *buffer)
     {
         // GETMSGS,<GROUP ID>
         // check if groupid is valid
-        std::string msg = "Getting message from group number " + tokens[1];
+        std::string msg = "Getting message from group number " + tokens[1] + "requested by: " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + ":" + std::to_string(clients[clientSocket]->port);
         logMessage(msg);
-        send(clientSocket, msg.c_str(), msg.length(), 0);
+        for (auto message : messageVector)
+        {
+            if (message.to.compare(tokens[1]) == 0)
+            {
+                std::string response = "SENDMSG," + message.to + "," + message.from + "," + message.message;
+                logMessage("Sending message to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + ":" + std::to_string(clients[clientSocket]->port) + " from group " + message.from);
+                sendMessage(*clients[clientSocket], response);
+            }
+        }
     }
     else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 4)
     {
-        // SENDMSG,<TO GROUP ID>,<FROM GROUP ID>,<Message content>
-        // NOTE: if you dont know this group, forward to the groups you know and let them handle it
-        std::string sanitizedToken2 = tokens[2];
-        size_t pos = sanitizedToken2.find('\n');
-        if (pos != std::string::npos)
-        {
-            sanitizedToken2.erase(pos, 1);
-        }
 
-        std::string msg = "Sending '" + sanitizedToken2 + "' from group " + tokens[2] + " to group number " + tokens[1];
-        logMessage(msg);
-        send(clientSocket, msg.c_str(), msg.length(), 0);
+        if (tokens[1] == "A5_42")
+        {
+            logMessage("Received message from " + tokens[2] + " to group number " + tokens[1]);
+            logMessage("Received message from " + tokens[2] + " Message Content:" + tokens[3], "Message_log.txt");
+        }
+        else
+        {
+            logMessage("Received message from " + tokens[2] + " to group number " + tokens[1]);
+            std::time_t now = std::time(0);
+            char timeStr[100];
+            strftime(timeStr, sizeof(timeStr), "%d-%m-%Y", localtime(&now));
+            Message message = Message(tokens[3], tokens[2], tokens[1], timeStr);
+            messageVector.push_back(message);
+        }
     }
     else if (tokens[0].compare("STATUSREQ") == 0)
     {

@@ -40,7 +40,7 @@ vector<string> checkMessageContentAndProcess(char *buffer)
     return tokens;
 }
 
-void logMessage(const std::string &msg, std::string filename)
+void logMessage(const std::string &msg, std::string filename = "")
 {
     std::time_t now = std::time(0);
     char timeStr[100];
