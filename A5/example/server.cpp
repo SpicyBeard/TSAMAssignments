@@ -43,32 +43,11 @@
 #define MAXSERVERS 8
 #define MINSERVERS 3
 
+#define MAXMISBEHAVIOUR 5
+
 // Simple class for handling connections from clients.
 //
 // Client(int socket) - socket to send/receive traffic from client.
-
-class Messages
-{
-public:
-    std::string message;
-    std::string from;
-    std::string to;
-    std::string timestamp;
-};
-
-class Client
-{
-public:
-    int sock;         // socket of client connection
-    std::string name; // Limit length of name of client's user
-    std::string ip_address;
-    int port;
-    std::vector<Client *> servers; // List of servers this client is connected to
-
-    Client(int socket) : sock(socket) {}
-
-    ~Client() {} // Virtual destructor defined for base class
-};
 
 // Note: map is not necessarily the most efficient method to use here,
 // especially for a server with large numbers of simulataneous connections,
@@ -78,6 +57,7 @@ public:
 // (indexed on socket no.) sacrificing memory for speed.
 
 std::map<int, Client *> clients; // Lookup table for per Client information
+int main_client = -1;            // Main client socket
 
 // Open socket for specified port.
 //
@@ -189,14 +169,12 @@ void clientCommand(int clientSocket, char *buffer)
         return;
     }
 
-    // TODO: figure out how to connect to other servers
-    // std::cout << "Connecting to server: " << tokens[1] << std::endl;
-
     if (tokens[0].compare("Rattatoskur") == 0)
     {
-        std::string msg = "Client connected to Server";
+        std::string msg = "Main Client connected to Server";
         logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
+        main_client = clientSocket;
     }
     else
 
@@ -204,8 +182,20 @@ void clientCommand(int clientSocket, char *buffer)
     {
         // HELO,<FROM GROUP ID>
         // tokens[1] should be A5_[number] or Inst_[number], if anything else, disconnect
-        clients[clientSocket]->name = tokens[1];
-        // send back HELO text
+        if (valid_id(tokens[1], clients))
+        {
+            clients[clientSocket]->name = tokens[1];
+            pair<string, int> source = getSourceIpandPort(clientSocket);
+            if (source.second == -1 || source.second == -1)
+            {
+                logMessage("Failed to get source port");
+                return;
+            }
+            clients[clientSocket]->ip_address = source.first;
+            clients[clientSocket]->port = source.second;
+            std::string response = "HELO,A5_42";
+            sendMessage(*clients[clientSocket], response);
+        }
     }
     else if (tokens[0].compare("SERVERS") == 0)
     {
@@ -251,7 +241,7 @@ void clientCommand(int clientSocket, char *buffer)
         // handle the status response
     }
     // From client
-    else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 3)
+    else if (tokens[0].compare("SENDMSG") == 0 && tokens.size() == 3 && main_client == clientSocket)
     {
         // NOTE: if you dont know this group, forward to the groups you know and let them handle it
         std::string sanitizedToken2 = tokens[2];
@@ -265,13 +255,13 @@ void clientCommand(int clientSocket, char *buffer)
         logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
-    else if (tokens[0].compare("GETMSG") == 0 && tokens.size() == 2)
+    else if (tokens[0].compare("GETMSG") == 0 && tokens.size() == 2 && main_client == clientSocket)
     {
         std::string msg = "Getting message from group number " + tokens[1];
         logMessage(msg);
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
-    else if (tokens[0].compare("LISTSERVERS") == 0)
+    else if (tokens[0].compare("LISTSERVERS") == 0 && main_client == clientSocket)
     {
         // TODO: figure out how to list all servers we are connected to
         std::string msg = "Listing all servers we are connected to: ";
@@ -339,16 +329,16 @@ int main(int argc, char *argv[])
     pollfds.push_back(listenPollFD);
 
     // establish minimum connections to begin server
-    while (pollfds.size() - 1 < MINSERVERS)
-    {
-        printf("Waiting for minimum servers to connect\n");
-        int tempSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
-        if (tempSock > 0)
-        {
-            send(tempSock, "Server full. Connection refused.\n", 35, 0);
-            close(tempSock);
-        }
-    }
+    // while (pollfds.size() - 1 < MINSERVERS)
+    // {
+    //     printf("Waiting for minimum servers to connect\n");
+    //     int tempSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
+    //     if (tempSock > 0)
+    //     {
+    //         send(tempSock, "Server full. Connection refused.\n", 35, 0);
+    //         close(tempSock);
+    //     }
+    // }
 
     finished = false;
 
@@ -425,6 +415,10 @@ int main(int argc, char *argv[])
                     {
                         // Client has disconnected
                         printf("Client disconnected: %d\n", clientSock);
+                        if (main_client == clientSock)
+                        {
+                            main_client = -1;
+                        }
                         closeClient(clientSock, pollfds);
                         clientsToRemove.push_back(i);
                         if (clients.find(clientSock) != clients.end())
