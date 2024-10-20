@@ -168,15 +168,12 @@ int open_socket(int portno, string ip)
     memset(&sk_addr, 0, sizeof(sk_addr));
 
     sk_addr.sin_family = AF_INET;
-    if (ip == "")
-    {
-        sk_addr.sin_addr.s_addr = INADDR_ANY;
-    }
-    else
-    {
-        sk_addr.sin_addr.s_addr = inet_addr(ip.c_str());
-    }
     sk_addr.sin_port = htons(portno);
+    if (inet_pton(AF_INET, ip.c_str(), &sk_addr.sin_addr) <= 0)
+    {
+        cout << "Unable to set IP address" << endl;
+        return -1;
+    }
 
     // Bind to socket to listen for connections from clients
 
