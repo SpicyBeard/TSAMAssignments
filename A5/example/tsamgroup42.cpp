@@ -354,7 +354,7 @@ int main(int argc, char *argv[])
     }
 
     // Setup socket for server to listen to
-    listenSock = open_socket(atoi(argv[1]), "");
+    listenSock = open_socket(atoi(argv[1]), "130.208.246.249");
 
     if (listen(listenSock, BACKLOG) < 0)
     {
@@ -373,37 +373,37 @@ int main(int argc, char *argv[])
     pollfds.push_back(listenPollFD);
 
     // establish minimum connections to begin server
-    // while (clients.size() != MINSERVERS)
-    // {
-    //     // send message to port 5001 to connect to server
-    //     int firstSock = open_socket(5001, "130.208.246.249");
-    //     sendMessage(firstSock, "HELO,A5_42");
-    //     logMessage("Sending HELO,A5_42 to port 5001", "");
-    //     int bytesRecieved = recv(firstSock, buffer, sizeof(buffer), 0);
-    //     // clientCommand(tempSock, buffer);
-    //     if (bytesRecieved > 0)
-    //     {
-    //         // Create a new client entry in the clients map and add to pollfds
-    //         clients[firstSock] = new Client(firstSock);
-    //         clients[firstSock]->ip_address = inet_ntoa(client.sin_addr);
-    //         clients[firstSock]->port = ntohs(client.sin_port);
-    //         clients[firstSock]->heloSent = true;
-    //         clientCommand(firstSock, buffer);
-    //         // Add new client to the pollfds vector
-    //         struct pollfd newClientPollFD;
-    //         newClientPollFD.fd = firstSock;
-    //         newClientPollFD.events = POLLIN; // We want to read from this socket
-    //         pollfds.push_back(newClientPollFD);
-    //     }
-    //     else
-    //     {
-    //         printf("Failed to receive message from client\n");
-    //     }
-    //     memcpy(buffer, "", sizeof(buffer));
-    //     bytesRecieved = (firstSock, buffer, sizeof(buffer), 0);
-    //     clientCommand(firstSock, buffer);
-    //     firstConnection(firstSock, clients[firstSock]->servers);
-    // }
+    while (clients.size() != MINSERVERS)
+    {
+        // send message to port 5001 to connect to server
+        int firstSock = open_socket(5001, "130.208.246.249");
+        sendMessage(firstSock, "HELO,A5_42");
+        logMessage("Sending HELO,A5_42 to port 5001", "");
+        int bytesRecieved = recv(firstSock, buffer, sizeof(buffer), 0);
+        // clientCommand(tempSock, buffer);
+        if (bytesRecieved > 0)
+        {
+            // Create a new client entry in the clients map and add to pollfds
+            clients[firstSock] = new Client(firstSock);
+            clients[firstSock]->ip_address = inet_ntoa(client.sin_addr);
+            clients[firstSock]->port = ntohs(client.sin_port);
+            clients[firstSock]->heloSent = true;
+            clientCommand(firstSock, buffer);
+            // Add new client to the pollfds vector
+            struct pollfd newClientPollFD;
+            newClientPollFD.fd = firstSock;
+            newClientPollFD.events = POLLIN; // We want to read from this socket
+            pollfds.push_back(newClientPollFD);
+        }
+        else
+        {
+            printf("Failed to receive message from client\n");
+        }
+        memcpy(buffer, "", sizeof(buffer));
+        bytesRecieved = (firstSock, buffer, sizeof(buffer), 0);
+        clientCommand(firstSock, buffer);
+        firstConnection(firstSock, clients[firstSock]->servers);
+    }
 
     finished = false;
 
