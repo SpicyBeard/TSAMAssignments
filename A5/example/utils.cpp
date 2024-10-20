@@ -40,14 +40,18 @@ vector<string> checkMessageContentAndProcess(char *buffer)
     return tokens;
 }
 
-void logMessage(const std::string &msg)
+void logMessage(const std::string &msg, std::string filename)
 {
     std::time_t now = std::time(0);
     char timeStr[100];
-    strftime(timeStr, sizeof(timeStr), "%d-%m-%Y", localtime(&now));
-    std::string LOGFILE = std::string(timeStr) + "_server" + ".log";
+    if (filename == "")
+    {
+        strftime(timeStr, sizeof(timeStr), "%d-%m-%Y", localtime(&now));
+        std::string filename = std::string(timeStr) + "_server" + ".log";
+    }
+
     ofstream logfile;
-    logfile.open(LOGFILE, ios::out | ios::app);
+    logfile.open(filename, ios::out | ios::app);
     if (!logfile.is_open())
     {
         cerr << "Failed to open log file" << endl;
