@@ -22,6 +22,19 @@ vector<string> checkMessageContentAndProcess(char *buffer)
         {
             tokens.push_back(token);
         }
+
+        // Split further on ';'
+        vector<string> finalTokens;
+        for (const auto &tok : tokens)
+        {
+            istringstream subStream(tok);
+            string subToken;
+            while (getline(subStream, subToken, ';'))
+            {
+                finalTokens.push_back(subToken);
+            }
+        }
+        tokens = finalTokens;
         return tokens;
     }
     return tokens;
@@ -90,11 +103,23 @@ bool valid_id(string id, map<int, Client *> &clients)
 
 void sendMessage(Client client, const std::string &msg)
 {
-    std::string loggedMessage = "Sending message to " + client.name + " at " + client.ip_address + ":" + std::to_string(client.port) + " : " + msg;
+
     char messageServer[msg.length() + 2];
     bzero(messageServer, sizeof(messageServer));
     messageServer[0] = 0x01;
     memcpy(messageServer + 1, msg.c_str(), msg.length());
     messageServer[msg.length() + 1] = 0x04;
     send(client.sock, messageServer, sizeof(messageServer), 0);
+}
+
+bool connectedClient(int sock, map<int, Client *> &clients)
+{
+    for (auto const &client : clients)
+    {
+        if (client.second->sock == sock)
+        {
+            return true;
+        }
+    }
+    return false;
 }

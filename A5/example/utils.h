@@ -60,4 +60,6 @@ vector<string> checkMessageContentAndProcess(char *buffer);
 
 void logMessage(const std::string &msg);
 
+bool connectedClient(int sock, map<int, Client *> &clients);
+
 #endif // UTILS_H

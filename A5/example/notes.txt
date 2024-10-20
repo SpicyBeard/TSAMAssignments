@@ -1,32 +1,96 @@
 GENERAL SETUP
-- check what servers are online
-- try to connect to 3-8 servers	
-	- both by looking at the once we discovered and those trying to connect to us
+[ ] check what servers are online
+[ ] try to connect to 3[ ]8 servers	
+	[ ] both by looking at the once we discovered and those trying to connect to us
 
-- send HELO or respond to HELO to set up connections
-- respond to HELO with SERVERS
-	- list of directly connected servers with group name, host ip and port
+[ ] send HELO or respond to HELO to set up connections
+[ ] respond to HELO with SERVERS
+	[ ] list of directly connected servers with group name, host ip and port
 	SERVERS,A5 1,130.208.243.61,8888;A5 2,10.2.132.12,10042;
 
-- send KEEPALIVE regularly to servers we are connected to 
-- listen to KEEPALIVE if they have a message for us, if they do
-	- GETMSG,<our group_id>
-- if no response from KEEPALIVE, or no KEEPALIVE received, disconnect from that 
+[ ] send KEEPALIVE regularly to servers we are connected to 
+[ ] listen to KEEPALIVE if they have a message for us, if they do
+	[ ] GETMSG,<our group_id>
+[ ] if no response from KEEPALIVE, or no KEEPALIVE received, disconnect from that 
 
-- SENDMSG to servers?
+[ ] SENDMSG to servers?
 
-- send STATUSRESP
-- respond to STATUSREP with STATUSRESP
+[ ] send STATUSRESP
+[ ] respond to STATUSREP with STATUSRESP
 	comma separated list of servers and number of messages
 	STATUSRESP,A5 4,20,A5 71,2
 
-- respond to SENDMSG
-	- if its to us, do whatever
-	- if its to someone else, store it.
-	- if its to someone we know, we will notify them with the keepalive
+[ ] respond to SENDMSG
+	[ ] if its to us, do whatever
+	[ ] if its to someone else, store it.
+	[ ] if its to someone we know, we will notify them with the keepalive
+
+[ ] deal with spam
+
+SERVER COMMANDS
+[x] HELO, <FROM_GROUP_ID>
+    [x] receive
+    [x] send
+    
+[x] SERVERS
+    [x] send
+    [x] recieve
+
+[x] KEEPALIVE,<No. of Messages>
+    [ ] send
+    [x] recieve
+
+[ ] GETMSGS,<GROUP ID>
+    [ ] send
+    [ ] recieve
+
+[ ] SENDMSG,<TO_GROUP_ID>,<FROM_GROUP_ID>,<message>
+    [ ] send
+    [ ] recieve
+
+[ ] STATUSREQ
+    [ ] send
+    [ ] recieve
+
+[ ] STATUSRESP,<server, msgs held>,...
+    [ ] send
+    [ ] recieve
+
+
+CLIENT COMMANDS
+[x] GETMSG,GROUP_ID
+    [x] send
+    [x] recieve
+    
+[x] SENDMSG,GROUP_ID,<message contents>
+    [x] send
+    [x] recieve
+
+[x] LISTSERVERS
+    [x] send
+    [x] recieve
 
 
 NOTES: 
 Keep track of the client, only the client can execute the client commands
 	- check first message, can be helo or password, if its password, update the client global variable.
+
+    Server A                                      Server B
+
+    |-----------HELO <group a="">----------------->|
+    |<-----------HELO <group b="">-----------------|
+    |<-----------SERVERS <b's peers="">------------|
+    |-----------SERVERS <a's peers="">------------>|
+    |                                              |
+    |-----------STATUSREQ------------------------->|
+    |<-----------STATUSREQ-------------------------|
+    |                                              |
+    |<-----------STATUSRESP------------------------|
+    |-----------STATUSRESP------------------------>|
+    |                                              |
+    |                                              |	(periodically, every minute)
+    |<-----------SERVERS <b's Peers>---------------|
+    |-----------SERVERS <a's Peers>--------------->|
+    |<-----------STATUSRESP------------------------|
+    |-----------STATUSRESP------------------------>|
 
