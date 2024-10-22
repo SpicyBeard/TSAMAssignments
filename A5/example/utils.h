@@ -67,4 +67,6 @@ void logMessage(const std::string &msg, std::string filename);
 
 bool connectedClient(int sock, map<int, Client *> &clients);
 
+int connect_to_server(int portno, const std::string &ip);
+
 #endif // UTILS_H

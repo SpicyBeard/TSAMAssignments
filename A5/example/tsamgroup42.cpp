@@ -375,12 +375,25 @@ int main(int argc, char *argv[])
     // establish minimum connections to begin server
     while (clients.size() != MINSERVERS)
     {
-        // send message to port 5001 to connect to server
-        int firstSock = open_socket(5001, "130.208.246.249");
+        int firstSock = socket(AF_INET, SOCK_STREAM, 0);
+        struct sockaddr_in server_addr;
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_addr.s_addr = inet_addr("130.208.246.249");
+        server_addr.sin_port = htons(5001);
+        printf("Connecting to server\n");
+
+        int port = connect_to_server(5001, "130.208.246.249");
+        if (port < 0)
+        {
+            perror("Failed to open socket");
+            exit(1);
+        }
+
+        logMessage("Sending HELO,A5_42 to port 5001", "server_log.log");
         sendMessage(firstSock, "HELO,A5_42");
-        logMessage("Sending HELO,A5_42 to port 5001", "");
+        printf("Sending Helo to server\n");
         int bytesRecieved = recv(firstSock, buffer, sizeof(buffer), 0);
-        // clientCommand(tempSock, buffer);
+
         if (bytesRecieved > 0)
         {
             // Create a new client entry in the clients map and add to pollfds
@@ -399,126 +412,151 @@ int main(int argc, char *argv[])
         {
             printf("Failed to receive message from client\n");
         }
-        memcpy(buffer, "", sizeof(buffer));
-        bytesRecieved = (firstSock, buffer, sizeof(buffer), 0);
-        clientCommand(firstSock, buffer);
-        firstConnection(firstSock, clients[firstSock]->servers);
+        // send message to port 5001 to connect to server
+        // int firstSock = connect_to_server(5002, "130.208.246.249");
+
+        // sendMessage(firstSock, "HELO,A5_42");
+        // logMessage("Sending HELO,A5_42 to port 5001", "server_log.log");
+        // int bytesRecieved = recv(firstSock, buffer, sizeof(buffer), 0);
+        // // clientCommand(tempSock, buffer);
+        // if (bytesRecieved > 0)
+        // {
+        //     // Create a new client entry in the clients map and add to pollfds
+        //     clients[firstSock] = new Client(firstSock);
+        //     clients[firstSock]->ip_address = inet_ntoa(client.sin_addr);
+        //     clients[firstSock]->port = ntohs(client.sin_port);
+        //     clients[firstSock]->heloSent = true;
+        //     clientCommand(firstSock, buffer);
+        //     // Add new client to the pollfds vector
+        //     struct pollfd newClientPollFD;
+        //     newClientPollFD.fd = firstSock;
+        //     newClientPollFD.events = POLLIN; // We want to read from this socket
+        //     pollfds.push_back(newClientPollFD);
+        // }
+        // else
+        // {
+        //     printf("Failed to receive message from client\n");
+        // }
+        // memcpy(buffer, "", sizeof(buffer));
+        // bytesRecieved = (firstSock, buffer, sizeof(buffer), 0);
+        // clientCommand(firstSock, buffer);
+        // firstConnection(firstSock, clients[firstSock]->servers);
     }
 
-    finished = false;
+    // finished = false;
 
-    while (!finished)
-    {
-        memset(buffer, 0, sizeof(buffer));
+    // while (!finished)
+    // {
+    //     memset(buffer, 0, sizeof(buffer));
 
-        // Use poll() instead of select()
-        int n = poll(pollfds.data(), pollfds.size(), -1); // Infinite timeout (-1)
+    //     // Use poll() instead of select()
+    //     int n = poll(pollfds.data(), pollfds.size(), -1); // Infinite timeout (-1)
 
-        if (n < 0)
-        {
-            perror("poll failed - closing down\n");
-            finished = true;
-        }
-        else
-        {
-            std::vector<size_t> clientsToRemove;
-            // Loop through pollfds to check which file descriptor is ready
-            for (size_t i = 0; i < pollfds.size(); i++)
-            {
-                if (pollfds[i].fd == listenSock && (pollfds[i].revents & POLLIN))
-                {
-                    if (pollfds.size() - 1 >= MAXSERVERS)
-                    {
-                        printf("Maximum number of clients reached. Refusing new connection.\n");
-                        int tempSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
-                        if (tempSock > 0)
-                        {
-                            send(tempSock, "Server full. Connection refused.\n", 35, 0);
-                            close(tempSock);
-                        }
-                    }
-                    else
-                    {
+    //     if (n < 0)
+    //     {
+    //         perror("poll failed - closing down\n");
+    //         finished = true;
+    //     }
+    //     else
+    //     {
+    //         std::vector<size_t> clientsToRemove;
+    //         // Loop through pollfds to check which file descriptor is ready
+    //         for (size_t i = 0; i < pollfds.size(); i++)
+    //         {
+    //             if (pollfds[i].fd == listenSock && (pollfds[i].revents & POLLIN))
+    //             {
+    //                 if (pollfds.size() - 1 >= MAXSERVERS)
+    //                 {
+    //                     printf("Maximum number of clients reached. Refusing new connection.\n");
+    //                     int tempSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
+    //                     if (tempSock > 0)
+    //                     {
+    //                         send(tempSock, "Server full. Connection refused.\n", 35, 0);
+    //                         close(tempSock);
+    //                     }
+    //                 }
+    //                 else
+    //                 {
 
-                        // Check if it's the listening socket (new connection)
-                        clientSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
-                    }
-                    if (clientSock > 0)
-                    {
-                        int bytesRecieved = recv(clientSock, buffer, sizeof(buffer), 0);
-                        if (bytesRecieved > 0)
-                        {
-                            // Create a new client entry in the clients map
-                            clients[clientSock] = new Client(clientSock);
-                            clients[clientSock]->ip_address = inet_ntoa(client.sin_addr);
-                            clients[clientSock]->port = ntohs(client.sin_port);
-                            clientCommand(clientSock, buffer);
-                        }
-                        else
-                        {
-                            printf("Failed to receive message from client\n");
-                        }
+    //                     // Check if it's the listening socket (new connection)
+    //                     clientSock = accept(listenSock, (struct sockaddr *)&client, &clientLen);
+    //                 }
+    //                 if (clientSock > 0)
+    //                 {
+    //                     int bytesRecieved = recv(clientSock, buffer, sizeof(buffer), 0);
+    //                     if (bytesRecieved > 0)
+    //                     {
+    //                         // Create a new client entry in the clients map
+    //                         clients[clientSock] = new Client(clientSock);
+    //                         clients[clientSock]->ip_address = inet_ntoa(client.sin_addr);
+    //                         clients[clientSock]->port = ntohs(client.sin_port);
+    //                         clientCommand(clientSock, buffer);
+    //                     }
+    //                     else
+    //                     {
+    //                         printf("Failed to receive message from client\n");
+    //                     }
 
-                        // printf("Helo from Group_42\n");
-                        // send(clientSock, "Helo, A5_42\n", 21, 0);
-                        // printf("Client connected on server: %d\n", clientSock);
+    //                     // printf("Helo from Group_42\n");
+    //                     // send(clientSock, "Helo, A5_42\n", 21, 0);
+    //                     // printf("Client connected on server: %d\n", clientSock);
 
-                        // Add new client to the pollfds vector
-                        struct pollfd newClientPollFD;
-                        newClientPollFD.fd = clientSock;
-                        newClientPollFD.events = POLLIN; // We want to read from this socket
-                        pollfds.push_back(newClientPollFD);
-                    }
-                }
-                // Check if an existing client has sent data
-                else if (pollfds[i].revents & POLLIN)
-                {
-                    int clientSock = pollfds[i].fd;
-                    int bytesReceived = recv(clientSock, buffer, sizeof(buffer), 0);
+    //                     // Add new client to the pollfds vector
+    //                     struct pollfd newClientPollFD;
+    //                     newClientPollFD.fd = clientSock;
+    //                     newClientPollFD.events = POLLIN; // We want to read from this socket
+    //                     pollfds.push_back(newClientPollFD);
+    //                 }
+    //             }
+    //             // Check if an existing client has sent data
+    //             else if (pollfds[i].revents & POLLIN)
+    //             {
+    //                 int clientSock = pollfds[i].fd;
+    //                 int bytesReceived = recv(clientSock, buffer, sizeof(buffer), 0);
 
-                    if (bytesReceived == 0)
-                    {
-                        // Client has disconnected
-                        printf("Client disconnected: %d\n", clientSock);
-                        if (main_client == clientSock)
-                        {
-                            main_client = -1;
-                        }
-                        closeClient(clientSock, pollfds);
-                        clientsToRemove.push_back(i);
-                        if (clients.find(clientSock) != clients.end())
-                        {
-                            delete clients[clientSock];
-                            clients.erase(clientSock);
-                        }
-                        // removeClientFromPoll(clientSock); // Remove from poll list
-                        // clients.erase(clientSock); // Remove from clients map
-                    }
-                    else if (bytesReceived > 0)
-                    {
-                        // Process the command from the client
-                        clientCommand(clientSock, buffer);
-                    }
-                }
-                // Check for errors or disconnection
-                else if (pollfds[i].revents & (POLLERR | POLLHUP))
-                {
-                    int clientSock = pollfds[i].fd;
-                    printf("Client disconnected due to error: %d\n", clientSock);
-                    closeClient(clientSock, pollfds);
-                    // removeClientFromPoll(clientSock); // Remove from poll list
-                    clientsToRemove.push_back(i);
-                    if (clients.find(clientSock) != clients.end())
-                    {
-                        delete clients[clientSock];
-                        clients.erase(clientSock);
-                    }
-                }
-            }
-            for (size_t i : clientsToRemove)
-            {
-                pollfds.erase(pollfds.begin() + i);
-            }
-        }
-    }
+    //                 if (bytesReceived == 0)
+    //                 {
+    //                     // Client has disconnected
+    //                     printf("Client disconnected: %d\n", clientSock);
+    //                     if (main_client == clientSock)
+    //                     {
+    //                         main_client = -1;
+    //                     }
+    //                     closeClient(clientSock, pollfds);
+    //                     clientsToRemove.push_back(i);
+    //                     if (clients.find(clientSock) != clients.end())
+    //                     {
+    //                         delete clients[clientSock];
+    //                         clients.erase(clientSock);
+    //                     }
+    //                     // removeClientFromPoll(clientSock); // Remove from poll list
+    //                     // clients.erase(clientSock); // Remove from clients map
+    //                 }
+    //                 else if (bytesReceived > 0)
+    //                 {
+    //                     // Process the command from the client
+    //                     clientCommand(clientSock, buffer);
+    //                 }
+    //             }
+    //             // Check for errors or disconnection
+    //             else if (pollfds[i].revents & (POLLERR | POLLHUP))
+    //             {
+    //                 int clientSock = pollfds[i].fd;
+    //                 printf("Client disconnected due to error: %d\n", clientSock);
+    //                 closeClient(clientSock, pollfds);
+    //                 // removeClientFromPoll(clientSock); // Remove from poll list
+    //                 clientsToRemove.push_back(i);
+    //                 if (clients.find(clientSock) != clients.end())
+    //                 {
+    //                     delete clients[clientSock];
+    //                     clients.erase(clientSock);
+    //                 }
+    //             }
+    //         }
+    //         for (size_t i : clientsToRemove)
+    //         {
+    //             pollfds.erase(pollfds.begin() + i);
+    //         }
+    //     }
+    // }
 }
