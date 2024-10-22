@@ -44,14 +44,15 @@ void logMessage(const std::string &msg, std::string filename = "")
 {
     std::time_t now = std::time(0);
     char timeStr[100];
-    if (filename == "")
+    std::string logFilename = filename;
+    if (logFilename == "")
     {
         strftime(timeStr, sizeof(timeStr), "%d-%m-%Y", localtime(&now));
-        std::string filename = std::string(timeStr) + "_server" + ".log";
+        logFilename = std::string(timeStr) + "_server" + ".log";
     }
 
     ofstream logfile;
-    logfile.open(filename, ios::out | ios::app);
+    logfile.open(logFilename, ios::out | ios::app);
     if (!logfile.is_open())
     {
         cerr << "Failed to open log file" << endl;

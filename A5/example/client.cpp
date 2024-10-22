@@ -3,7 +3,7 @@
 //
 // Command line: ./chat_client 4000
 //
-// Author: Jacky Mallett (jacky@ru.is)
+
 //
 #include <stdio.h>
 #include <errno.h>

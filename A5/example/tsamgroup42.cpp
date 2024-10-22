@@ -91,13 +91,21 @@ void clientCommand(int clientSocket, char *buffer)
                     response += server.second->name + "," + server.second->ip_address + "," + std::to_string(server.second->port) + ";";
                 }
             }
-            if (!client.heloSent)
-            {
-                client.heloSent = true;
-                sendMessage(client, "HELO,A5_42");
-            }
+            // if (!client.heloSent)
+            // {
+            //     client.heloSent = true;
+            //     sendMessage(client, "HELO,A5_42");
+            // }
             std::string loggedMessage = "Sending server list to " + client.name + " at " + client.ip_address + ":" + std::to_string(client.port);
             logMessage(loggedMessage, "");
+            sendMessage(*clients[clientSocket], response);
+            response = "SERVERS,A5_42";
+            for (auto server : client.servers)
+            {
+                response += "," + server->name + "," + server->ip_address + "," + std::to_string(server->port) + ";";
+            }
+            // reply with SERVERS
+            logMessage("Sending conencted server list to " + client.name + " at " + client.ip_address + ":" + std::to_string(client.port), "");
             sendMessage(*clients[clientSocket], response);
         }
     }
@@ -130,14 +138,14 @@ void clientCommand(int clientSocket, char *buffer)
             client.servers.push_back(server);
         }
 
-        std::string response = "SERVERS,A5_42";
-        for (auto server : client.servers)
-        {
-            response += "," + server->name + "," + server->ip_address + "," + std::to_string(server->port) + ";";
-        }
+        // std::string response = "SERVERS,A5_42";
+        // for (auto server : client.servers)
+        // {
+        //     response += "," + server->name + "," + server->ip_address + "," + std::to_string(server->port) + ";";
+        // }
         // reply with SERVERS
-        logMessage("Sending conencted server list to " + client.name + " at " + client.ip_address + ":" + std::to_string(client.port), "");
-        sendMessage(*clients[clientSocket], response);
+        // logMessage("Sending conencted server list to " + client.name + " at " + client.ip_address + ":" + std::to_string(client.port), "");
+        // sendMessage(*clients[clientSocket], response);
     }
     else if (tokens[0].compare("KEEPALIVE") == 0 && connectedClient(clientSocket, clients))
     {
@@ -382,19 +390,21 @@ int main(int argc, char *argv[])
         server_addr.sin_port = htons(5001);
         printf("Connecting to server\n");
 
-        int port = connect_to_server(5001, "130.208.246.249");
-        if (port < 0)
+        if (connect(firstSock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
         {
-            perror("Failed to open socket");
+            perror("Failed to connect to server");
+            close(firstSock);
             exit(1);
         }
 
-        logMessage("Sending HELO,A5_42 to port 5001", "server_log.log");
-        sendMessage(firstSock, "HELO,A5_42");
+        Client firstClient = Client(firstSock);
+        firstClient.ip_address = "130.208.246.249";
+        firstClient.port = 5001;
+        logMessage("Sending HELO,A5_42 to port 5001", "");
+        sendMessage(firstClient, "HELO,A5_42");
         printf("Sending Helo to server\n");
-        int bytesRecieved = recv(firstSock, buffer, sizeof(buffer), 0);
-
-        if (bytesRecieved > 0)
+        int bytesRecieved;
+        if ((bytesRecieved = recv(firstSock, buffer, sizeof(buffer), 0)) > 0)
         {
             // Create a new client entry in the clients map and add to pollfds
             clients[firstSock] = new Client(firstSock);
@@ -405,8 +415,13 @@ int main(int argc, char *argv[])
             // Add new client to the pollfds vector
             struct pollfd newClientPollFD;
             newClientPollFD.fd = firstSock;
-            newClientPollFD.events = POLLIN; // We want to read from this socket
+            newClientPollFD.events = POLLIN | POLLOUT; // We want to read from this socket
             pollfds.push_back(newClientPollFD);
+            memccpy(buffer, "", sizeof(buffer), sizeof(buffer));
+            if (bytesRecieved = recv(firstSock, buffer, sizeof(buffer), 0) > 0)
+            {
+                clientCommand(firstSock, buffer);
+            }
         }
         else
         {
