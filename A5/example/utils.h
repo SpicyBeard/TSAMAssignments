@@ -69,4 +69,6 @@ bool connectedClient(int sock, map<int, Client *> &clients);
 
 int connect_to_server(int portno, const std::string &ip);
 
+void sendKeepalive(Client client);
+
 #endif // UTILS_H

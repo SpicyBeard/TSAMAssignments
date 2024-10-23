@@ -210,5 +210,11 @@ int connect_to_server(int portno, const string &ip)
         return -1;
     }
 
-    return sock; // Return the socket descriptor for the established connection
+    return sock;
+}
+
+void sendKeepalive(Client client, int messages)
+{
+    string keepalive = "KEEPALIVE," + to_string(messages);
+    sendMessage(client, keepalive);
 }
