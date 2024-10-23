@@ -92,7 +92,7 @@ pair<string, int> getSourceIpandPort(int sockfd)
 
 bool valid_id(string id, map<int, Client *> &clients)
 {
-    if (id.find("A5_") != string::npos || id.find("Inst_") != string::npos)
+    if (id.find("A5_") != string::npos || id.find("Instr_") != string::npos)
     {
         for (auto const &client : clients)
         {
