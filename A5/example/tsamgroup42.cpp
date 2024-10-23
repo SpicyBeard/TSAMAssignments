@@ -264,19 +264,14 @@ void clientCommand(int clientSocket, char *buffer)
 // Remove fd_set and declare a vector of pollfd instead
 std::vector<struct pollfd> pollfds;
 
-// Helper function to remove client from poll list
-void removeClientFromPoll(int clientSocket)
-{
-    auto it = std::remove_if(pollfds.begin(), pollfds.end(), [clientSocket](struct pollfd &pfd)
-                             { return pfd.fd == clientSocket; });
-    pollfds.erase(it, pollfds.end());
-}
-
 void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
 {
     printf("Client closed connection: %d\n", clientSocket);
+    // delete the client from clients
+    // use destructor
+    delete clients[clientSocket];
+    clients.erase(clientSocket);
     close(clientSocket);
-
     // Remove the socket from the pollfds vector
     auto it = std::remove_if(pollfds.begin(), pollfds.end(),
                              [clientSocket](struct pollfd &pfd)
@@ -405,6 +400,7 @@ int main(int argc, char *argv[])
 
     Client firstClient = Client(firstSock);
     firstClient.ip_address = "130.208.246.249";
+    printf("Connected to server\n");
     firstClient.port = 5001;
     logMessage("Sending HELO,A5_42 to port 5001", "");
     sendMessage(firstClient, "HELO,A5_42");
@@ -512,9 +508,8 @@ int main(int argc, char *argv[])
         {
             // choose random client servers from client
             //  connect to them
-            int clientSize = clients.size();
-            int randomIndex = rand() % clientSize;
-            firstConnection(clients[randomIndex]->servers);
+
+            firstConnection(clients[rand() % clients.size()]->servers);
         }
     }
 }
