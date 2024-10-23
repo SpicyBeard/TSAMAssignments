@@ -47,6 +47,7 @@ public:
     bool heloSent = false;
     std::vector<Client *> servers; // List of servers this client is connected to
     int misbehaveCounter = 0;
+    time_t lastMessage = time(0);
 
     Client(int socket) : sock(socket) {}
 
@@ -56,6 +57,8 @@ public:
 int open_socket(int portno, string ip);
 
 void sendMessage(Client client, const std::string &msg);
+
+char *receiveMessage(int sockfd);
 
 pair<string, int> getSourceIpandPort(int sockfd);
 
@@ -67,7 +70,7 @@ void logMessage(const std::string &msg, std::string filename);
 
 bool connectedClient(int sock, map<int, Client *> &clients);
 
-int connect_to_server(int portno, const std::string &ip);
+int connectToServer(int portno, const std::string &ip);
 
 void sendKeepalive(Client client, int messages);
 
