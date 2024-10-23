@@ -82,11 +82,10 @@ void clientCommand(int clientSocket, char *buffer)
                 return;
             }
             clients[clientSocket]->name = tokens[1];
-            Client client = *clients[clientSocket];
             std::string response = "SERVERS,A5_42,130.208.246.249,4042;";
             for (auto server : clients)
             {
-                if (server.second->name != client.name)
+                if (server.second->name != clients[clientSocket]->name)
                 {
                     response += server.second->name + "," + server.second->ip_address + "," + std::to_string(server.second->port) + ";";
                 }
@@ -96,36 +95,31 @@ void clientCommand(int clientSocket, char *buffer)
             //     client.heloSent = true;
             //     sendMessage(client, "HELO,A5_42");
             // }
-            std::string loggedMessage = "Sending server list to " + client.name + " at " + client.ip_address + ":" + std::to_string(client.port);
-            logMessage(loggedMessage, "");
+            std::string loggedMessage = "Sending server list to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + ":" + std::to_string(clients[clientSocket]->port);
+            logMessage("Sending connected server list to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + ":" + std::to_string(clients[clientSocket]->port), "");
             sendMessage(*clients[clientSocket], response);
-            response = "SERVERS,A5_42";
-            for (auto server : client.servers)
-            {
-                response += "," + server->name + "," + server->ip_address + "," + std::to_string(server->port) + ";";
-            }
             // reply with SERVERS
-            logMessage("Sending conencted server list to " + client.name + " at " + client.ip_address + ":" + std::to_string(client.port), "");
-            sendMessage(*clients[clientSocket], response);
         }
     }
     else if (tokens[0].compare("SERVERS") == 0 && connectedClient(clientSocket, clients))
     {
         // SERVERS,A5_1,130.208.243.61,8888;A5_2,10.2.132.12,10042;
         // handle the list of servers
-        Client client = *clients[clientSocket];
+        // Client client = *clients[clientSocket];
         if (tokens.size() < 2)
         {
             return;
         }
+        // the name is nothing
+        // cout << "Client name: " << client.name << endl;
         std::string loggedMessage = "Received list of servers from " + clients[clientSocket]->name;
         logMessage(loggedMessage, "");
         for (int i = 1; i < 4; i++)
         {
-            if (client.name != tokens[i] && client.ip_address != tokens[i + 1] && client.port != std::stoi(tokens[i + 2]))
+            if (clients[clientSocket]->name != tokens[i] && clients[clientSocket]->ip_address != tokens[i + 1] && clients[clientSocket]->port != std::stoi(tokens[i + 2]))
             {
-                logMessage("Invalid server list from " + client.name, "");
-                client.misbehaveCounter++;
+                logMessage("Invalid server list from " + clients[clientSocket]->name, "");
+                clients[clientSocket]->misbehaveCounter++;
                 return;
             }
         }
@@ -135,7 +129,7 @@ void clientCommand(int clientSocket, char *buffer)
             server->name = tokens[i];
             server->ip_address = tokens[i + 1];
             server->port = std::stoi(tokens[i + 2]);
-            client.servers.push_back(server);
+            clients[clientSocket]->servers.push_back(server);
         }
 
         // std::string response = "SERVERS,A5_42";
@@ -412,15 +406,25 @@ int main(int argc, char *argv[])
             clients[firstSock]->port = ntohs(client.sin_port);
             clients[firstSock]->heloSent = true;
             clientCommand(firstSock, buffer);
+            cout << "Added client " << clients[firstSock]->name << " to clients map\n";
             // Add new client to the pollfds vector
             struct pollfd newClientPollFD;
             newClientPollFD.fd = firstSock;
-            newClientPollFD.events = POLLIN | POLLOUT; // We want to read from this socket
+            newClientPollFD.events = POLLIN | POLLOUT;
             pollfds.push_back(newClientPollFD);
-            memccpy(buffer, "", sizeof(buffer), sizeof(buffer));
-            if (bytesRecieved = recv(firstSock, buffer, sizeof(buffer), 0) > 0)
+            char secondBuffer[5000];
+            cout << "Getting second response";
+            if (bytesRecieved = recv(firstSock, secondBuffer, sizeof(secondBuffer), 0) > 0)
             {
-                clientCommand(firstSock, buffer);
+                clientCommand(firstSock, secondBuffer);
+                for (auto client : clients[firstSock]->servers)
+                {
+                    printf("Client: %s\n", client->name.c_str());
+                }
+            }
+            else
+            {
+                cout << "Failed to receive message from client\n";
             }
         }
         else
