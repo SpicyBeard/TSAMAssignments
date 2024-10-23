@@ -460,6 +460,7 @@ int main(int argc, char *argv[])
     time_t disconnect_interval = 300; // 5 minutes timeout
     int timeout = 5000;               // 5 seconds poll timeout
 
+    char recieveBuffer[5000];
     while (!finished)
     {
         time_t current_time = time(nullptr);
@@ -483,8 +484,26 @@ int main(int argc, char *argv[])
                 if (fd.revents & POLLIN)
                 {
                     // needs handling incoming data
-                    char recieveBuffer[5000];
-                    clientCommand(fd.fd, recieveBuffer);
+                    char recievedBuffer[5000];
+                    recv(fd.fd, recieveBuffer, sizeof(recieveBuffer), 0);
+                    if (recieveBuffer == NULL)
+                    {
+                        if (clients[fd.fd]->misbehaveCounter >= MAXMISBEHAVIOUR)
+                        {
+                            closeClient(fd.fd, pollfds);
+                            continue;
+                        }
+                        else if (last_message_time[fd.fd] > 300)
+                        {
+                            closeClient(fd.fd, pollfds);
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        clientCommand(fd.fd, recieveBuffer);
+                        last_message_time[fd.fd] = current_time;
+                    }
                 }
             }
         }
