@@ -304,7 +304,7 @@ void firstConnection(vector<Client *> &client_vector)
     {
         if (client->name.find("A5_") != string::npos || client->name.find("Instr_") != string::npos)
         {
-            if (client->name == "A5_42" || client->name == "Instr_2" || client->name == "Instr_1")
+            if (client->name == "A5_42" || client->name == "Instr_2" || client->name == "Instr_1" || client->port == -1)
             {
                 continue;
             }
@@ -367,7 +367,7 @@ void firstConnection(vector<Client *> &client_vector)
 
 int main(int argc, char *argv[])
 {
-    bool finished;
+    bool finished = false;
     int listenSock; // Socket for connections to server
     int clientSock; // Socket of connecting client
     struct sockaddr_in client;
@@ -452,5 +452,63 @@ int main(int argc, char *argv[])
     else
     {
         printf("Failed to receive message from client\n");
+    }
+
+    std::map<int, time_t> last_message_time; // Track last message received for each connection
+    time_t last_keepalive_time = time(nullptr);
+    time_t keepalive_interval = 60;   // Send keepalive every minute
+    time_t disconnect_interval = 300; // 5 minutes timeout
+    int timeout = 5000;               // 5 seconds poll timeout
+
+    while (!finished)
+    {
+        time_t current_time = time(nullptr);
+
+        if (current_time - last_keepalive_time >= keepalive_interval)
+        {
+            for (auto poll : pollfds)
+            {
+                sendKeepalive(poll)
+            }
+        }
+        last_keepalive_time = current_time;
+
+        // poll
+        int ret = poll(pollfds.data(), pollfds.size(), timeout);
+
+        if (ret > 0)
+        {
+            for (auto &fd : pollfds)
+            {
+                if (fd.revents & POLLIN)
+                {
+                    // needs handling incoming data
+
+                    clientCommand(fd.fd, buffer);
+                }
+            }
+        }
+
+        for (auto it = pollfds.begin(); it != pollfds.end();)
+        {
+            if (current_time - last_message_time[it->fd] >= disconnect_interval)
+            {
+                closeClient(it->fd, pollfds);
+                it = pollfds.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+        // make sure there are at least 3 connections
+        while (pollfds.size() <= MINSERVERS)
+        {
+            // choose random client servers from client
+            //  connect to them
+            int clientSize = clients.size();
+            int randomIndex = rand() % clientSize;
+            firstConnection(clients[randomIndex]->servers);
+        }
     }
 }
