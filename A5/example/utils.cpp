@@ -66,7 +66,7 @@ void logMessage(const string &msg, string filename = "")
     else
     {
 
-        memcpy(timeStr, "", sizeof(timeStr));
+        memset(timeStr, 0, sizeof(timeStr));
         strftime(timeStr, sizeof(timeStr), "%d-%m-%Y %H:%M:%S", localtime(&now));
         logfile << timeStr << ": " << msg << endl;
         cout << timeStr << ": " << msg << endl;
@@ -120,6 +120,19 @@ void sendMessage(Client client, const string &msg)
     memcpy(messageServer + 1, msg.c_str(), msg.length());
     messageServer[msg.length() + 1] = 0x04;
     send(client.sock, messageServer, sizeof(messageServer), 0);
+}
+
+char *receiveMessage(int sockfd)
+{
+    static char buffer[5000];
+    static char emptyStr[] = "";
+    bzero(buffer, sizeof(buffer));
+    int bytesRecieved = recv(sockfd, buffer, sizeof(buffer), 0);
+    if (bytesRecieved <= 0)
+    {
+        return emptyStr;
+    }
+    return buffer;
 }
 
 bool connectedClient(int sock, map<int, Client *> &clients)
@@ -178,39 +191,27 @@ int open_socket(int portno, string ip)
     return sock; // Return the listening socket descriptor
 }
 
-int connect_to_server(int portno, const string &ip)
+int connectToServer(int portno, const std::string &ip)
 {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    {
+        return -1;
+    }
+
     struct sockaddr_in server_addr;
-    int sock;
-
-    // Create socket
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        perror("Failed to create socket");
-        return -1;
-    }
-
-    memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(ip.c_str());
     server_addr.sin_port = htons(portno);
+    cout << "Connecting to server at " << ip << " : " << portno << endl;
 
-    // Convert IP address from text to binary form
-    if (inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr) <= 0)
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        cerr << "Invalid IP address: " << ip << endl;
-        close(sock);
+        close(sockfd);
         return -1;
     }
 
-    // Connect to the server
-    if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-    {
-        perror("Connection Failed");
-        close(sock);
-        return -1;
-    }
-
-    return sock;
+    return sockfd;
 }
 
 void sendKeepalive(Client client, int messages)
