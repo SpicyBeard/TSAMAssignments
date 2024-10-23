@@ -61,7 +61,7 @@ pair<string, int> getSourceIpandPort(int sockfd);
 
 bool valid_id(string id, map<int, Client *> &clients);
 
-vector<string> checkMessageContentAndProcess(char *buffer);
+vector<vector<string>> checkMessageContentAndProcess(char *buffer);
 
 void logMessage(const std::string &msg, std::string filename);
 

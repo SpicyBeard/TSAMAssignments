@@ -1,23 +1,28 @@
 #include "utils.h"
 
-vector<string> checkMessageContentAndProcess(char *buffer)
+vector<vector<string>> checkMessageContentAndProcess(char *buffer)
 {
+    vector<vector<string>> commands;
+    string input(buffer);
 
-    vector<string> tokens;
-    if (buffer[0] == 0x01 && buffer[strlen(buffer) - 1] == 0x04)
+    size_t start = 0;
+    size_t end = 0;
+
+    while ((start = input.find(0x01, end)) != string::npos)
     {
-        string input(buffer);
+        end = input.find(0x04, start);
+        if (end == string::npos)
+        {
+            break; // No more complete messages
+        }
 
-        input.erase(0, 1); // Remove starting 0x01 marker
+        string message = input.substr(start + 1, end - start - 1); // Extract message between 0x01 and 0x04
+        message.erase(0, message.find_first_not_of(" \n\r"));
+        message.erase(message.find_last_not_of(" \n\r") + 1);
 
-        input.erase(input.length() - 1); // Remove ending 0x04 marker
-
-        // Trim any extra whitespaces, newline, etc.
-        input.erase(0, input.find_first_not_of(" \n\r"));
-        input.erase(input.find_last_not_of(" \n\r") + 1);
+        istringstream stream(message);
         string token;
-        istringstream stream(input);
-
+        vector<string> tokens;
         while (getline(stream, token, ','))
         {
             tokens.push_back(token);
@@ -34,21 +39,21 @@ vector<string> checkMessageContentAndProcess(char *buffer)
                 finalTokens.push_back(subToken);
             }
         }
-        tokens = finalTokens;
-        return tokens;
+        commands.push_back(finalTokens);
     }
-    return tokens;
+
+    return commands;
 }
 
-void logMessage(const std::string &msg, std::string filename = "")
+void logMessage(const string &msg, string filename = "")
 {
-    std::time_t now = std::time(0);
+    time_t now = time(0);
     char timeStr[100];
-    std::string logFilename = filename;
+    string logFilename = filename;
     if (logFilename == "")
     {
         strftime(timeStr, sizeof(timeStr), "%d-%m-%Y", localtime(&now));
-        logFilename = std::string(timeStr) + "_server" + ".log";
+        logFilename = string(timeStr) + "_server" + ".log";
     }
 
     ofstream logfile;
@@ -106,7 +111,7 @@ bool valid_id(string id, map<int, Client *> &clients)
     return false;
 }
 
-void sendMessage(Client client, const std::string &msg)
+void sendMessage(Client client, const string &msg)
 {
     printf("Sending message to %s at %s:%d\n", client.name.c_str(), client.ip_address.c_str(), client.port);
     char messageServer[msg.length() + 2];
@@ -129,67 +134,7 @@ bool connectedClient(int sock, map<int, Client *> &clients)
     return false;
 }
 
-// int open_socket(int portno, string ip)
-// {
-//     struct sockaddr_in sk_addr; // address settings for bind()
-//     int sock;                   // socket opened for this port
-//     int set = 1;                // for setsockopt
-
-//     // Create socket for connection. Set to be non-blocking, so recv will
-//     // return immediately if there isn't anything waiting to be read.
-// #ifdef __APPLE__
-//     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-//     {
-//         perror("Failed to open socket");
-//         return (-1);
-//     }
-// #else
-//     if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
-//     {
-//         perror("Failed to open socket");
-//         return (-1);
-//     }
-// #endif
-
-//     // Turn on SO_REUSEADDR to allow socket to be quickly reused after
-//     // program exit.
-
-//     if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &set, sizeof(set)) < 0)
-//     {
-//         perror("Failed to set SO_REUSEADDR:");
-//     }
-//     set = 1;
-// #ifdef __APPLE__
-//     if (setsockopt(sock, SOL_SOCKET, SOCK_NONBLOCK, &set, sizeof(set)) < 0)
-//     {
-//         perror("Failed to set SOCK_NOBBLOCK");
-//     }
-// #endif
-
-//     memset(&sk_addr, 0, sizeof(sk_addr));
-
-//     sk_addr.sin_family = AF_INET;
-//     sk_addr.sin_port = htons(portno);
-//     if (inet_pton(AF_INET, ip.c_str(), &sk_addr.sin_addr) <= 0)
-//     {
-//         cout << "Unable to set IP address" << endl;
-//         return -1;
-//     }
-
-//     // Bind to socket to listen for connections from clients
-
-//     if (bind(sock, (struct sockaddr *)&sk_addr, sizeof(sk_addr)) < 0)
-//     {
-//         perror("Failed to bind to socket:");
-//         return (-1);
-//     }
-//     else
-//     {
-//         return (sock);
-//     }
-// }
-
-int open_socket(int portno, std::string ip)
+int open_socket(int portno, string ip)
 {
     struct sockaddr_in server_addr;
     int sock;
@@ -209,7 +154,7 @@ int open_socket(int portno, std::string ip)
     // Convert IP address from text to binary form
     if (inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr) <= 0)
     {
-        std::cerr << "Invalid IP address: " << ip << std::endl;
+        cerr << "Invalid IP address: " << ip << endl;
         close(sock);
         return -1;
     }
@@ -233,7 +178,7 @@ int open_socket(int portno, std::string ip)
     return sock; // Return the listening socket descriptor
 }
 
-int connect_to_server(int portno, const std::string &ip)
+int connect_to_server(int portno, const string &ip)
 {
     struct sockaddr_in server_addr;
     int sock;
@@ -252,7 +197,7 @@ int connect_to_server(int portno, const std::string &ip)
     // Convert IP address from text to binary form
     if (inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr) <= 0)
     {
-        std::cerr << "Invalid IP address: " << ip << std::endl;
+        cerr << "Invalid IP address: " << ip << endl;
         close(sock);
         return -1;
     }
