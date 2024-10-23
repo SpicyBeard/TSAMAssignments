@@ -468,7 +468,7 @@ int main(int argc, char *argv[])
         {
             for (auto poll : pollfds)
             {
-                sendKeepalive(poll)
+                sendKeepalive(*clients[poll.fd], messageMap[clients[poll.fd]->name]);
             }
         }
         last_keepalive_time = current_time;
@@ -483,8 +483,8 @@ int main(int argc, char *argv[])
                 if (fd.revents & POLLIN)
                 {
                     // needs handling incoming data
-
-                    clientCommand(fd.fd, buffer);
+                    char recieveBuffer[5000];
+                    clientCommand(fd.fd, recieveBuffer);
                 }
             }
         }
