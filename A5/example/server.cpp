@@ -51,67 +51,6 @@ std::vector<struct pollfd> pollfds; // vector of pollfd instead
 
 // Process command from client on the server
 
-void clientCommand(int clientSocket, std::string buffer)
-{
-    handleInvalidCommand(clientSocket, buffer);
-
-    std::vector<std::vector<std::string>> all_tokens = checkMessageContentAndProcess(buffer);
-
-    for (auto &tokens : all_tokens)
-    {
-        dispatchCommand(clientSocket, tokens);
-    }
-}
-
-void dispatchCommand(int clientSocket, const std::vector<std::string> &tokens)
-{
-    if (tokens[0] == "Rattatoskur")
-    {
-        handleRattatoskurCommand(clientSocket);
-    }
-    else if (tokens[0] == "HELO")
-    {
-        handleHeloCommand(clientSocket, tokens);
-    }
-    else if (tokens[0] == "SERVERS")
-    {
-        handleServersCommand(clientSocket, tokens);
-    }
-    else if (tokens[0] == "KEEPALIVE")
-    {
-        handleKeepAliveCommand(clientSocket, tokens);
-    }
-    else if (tokens[0] == "LISTSERVERS" && main_client == clientSocket)
-    {
-        handleListServersCommand(clientSocket);
-    }
-    else if (tokens[0] == "SENDMSG" && main_client == clientSocket)
-    {
-        handleSendMsgCommand(clientSocket, tokens);
-    }
-    else if (tokens[0] == "STATUSREQ")
-    {
-        handleStatusReqCommand(clientSocket);
-    }
-    else if (tokens[0] == "STATUSRESP")
-    {
-        handleStatusRespCommand(clientSocket, tokens);
-    }
-    else if (tokens[0] == "GETMSGS")
-    {
-        handleGetMsgsCommand(clientSocket, tokens);
-    }
-    else if (tokens[0] == "GETMSG" && main_client == clientSocket)
-    {
-        handleGetMsgCommand(clientSocket, tokens);
-    }
-    else
-    {
-        handleInvalidCommand(clientSocket, "");
-        clients[clientSocket]->misbehaveCounter++;
-    }
-}
-
 std::vector<std::vector<std::string>> processTokens(char *buffer)
 {
     return checkMessageContentAndProcess(buffer);
@@ -160,7 +99,7 @@ void handleServersCommand(int clientSocket, const std::vector<std::string> &toke
     {
         clients[clientSocket]->lastMessage = time(0);
 
-        logMessage("|| SERVERS || received", "");
+        logMessage("|| SERVERS || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
         // check if the first server matches the current one
         if (clients[clientSocket]->name != tokens[1])
         {
@@ -339,6 +278,67 @@ void handleInvalidCommand(int clientSocket, string buffer)
         std::string msg = "Invalid command from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port);
         logMessage(msg, "");
         clients[clientSocket]->misbehaveCounter++;
+    }
+}
+
+void dispatchCommand(int clientSocket, const std::vector<std::string> &tokens)
+{
+    if (tokens[0] == "Rattatoskur")
+    {
+        handleRattatoskurCommand(clientSocket);
+    }
+    else if (tokens[0] == "HELO")
+    {
+        handleHeloCommand(clientSocket, tokens);
+    }
+    else if (tokens[0] == "SERVERS")
+    {
+        handleServersCommand(clientSocket, tokens);
+    }
+    else if (tokens[0] == "KEEPALIVE")
+    {
+        handleKeepAliveCommand(clientSocket, tokens);
+    }
+    else if (tokens[0] == "LISTSERVERS" && main_client == clientSocket)
+    {
+        handleListServersCommand(clientSocket);
+    }
+    else if (tokens[0] == "SENDMSG" && main_client == clientSocket)
+    {
+        handleSendMsgCommand(clientSocket, tokens);
+    }
+    else if (tokens[0] == "STATUSREQ")
+    {
+        handleStatusReqCommand(clientSocket);
+    }
+    else if (tokens[0] == "STATUSRESP")
+    {
+        handleStatusRespCommand(clientSocket, tokens);
+    }
+    else if (tokens[0] == "GETMSGS")
+    {
+        handleGetMsgsCommand(clientSocket, tokens);
+    }
+    else if (tokens[0] == "GETMSG" && main_client == clientSocket)
+    {
+        handleGetMsgCommand(clientSocket, tokens);
+    }
+    else
+    {
+        handleInvalidCommand(clientSocket, "");
+        clients[clientSocket]->misbehaveCounter++;
+    }
+}
+
+void clientCommand(int clientSocket, std::string buffer)
+{
+    handleInvalidCommand(clientSocket, buffer);
+
+    std::vector<std::vector<std::string>> all_tokens = checkMessageContentAndProcess(buffer);
+
+    for (auto &tokens : all_tokens)
+    {
+        dispatchCommand(clientSocket, tokens);
     }
 }
 
