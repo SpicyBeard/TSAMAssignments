@@ -1,9 +1,8 @@
 #include "utils.h"
 
-vector<vector<string>> checkMessageContentAndProcess(char *buffer)
+vector<vector<string>> checkMessageContentAndProcess(const string &input)
 {
     vector<vector<string>> commands;
-    string input(buffer);
 
     size_t start = 0;
     size_t end = 0;
@@ -113,7 +112,7 @@ bool valid_id(string id, map<int, Client *> &clients)
 
 void sendMessage(Client client, const string &msg)
 {
-    printf("Sending message to %s at %s:%d\n", client.name.c_str(), client.ip_address.c_str(), client.port);
+    cout << "Sending message to " + client.name + " at " + client.ip_address + " : " + to_string(client.port) << endl;
     char messageServer[msg.length() + 2];
     bzero(messageServer, sizeof(messageServer));
     messageServer[0] = 0x01;
@@ -122,17 +121,17 @@ void sendMessage(Client client, const string &msg)
     send(client.sock, messageServer, sizeof(messageServer), 0);
 }
 
-char *receiveMessage(int sockfd)
+string receiveMessage(int sockfd)
 {
-    static char buffer[5000];
-    static char emptyStr[] = "";
-    bzero(buffer, sizeof(buffer));
-    int bytesRecieved = recv(sockfd, buffer, sizeof(buffer), 0);
-    if (bytesRecieved <= 0)
+    char buffer[5000];
+    memset(buffer, 0, sizeof(buffer));
+    int bytesReceived = recv(sockfd, buffer, sizeof(buffer), 0);
+
+    if (bytesReceived <= 0)
     {
-        return emptyStr;
+        return "";
     }
-    return buffer;
+    return string(buffer, bytesReceived);
 }
 
 bool connectedClient(int sock, map<int, Client *> &clients)
@@ -203,13 +202,42 @@ int connectToServer(int portno, const std::string &ip)
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(ip.c_str());
     server_addr.sin_port = htons(portno);
-    cout << "Connecting to server at " << ip << " : " << portno << endl;
 
+    // TODO: Getting stuck here
+    // add some sort of timeout?
+    cout << "Trying to connect to " << ip << " : " << portno << endl;
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         close(sockfd);
         return -1;
     }
+    logMessage("|| INFO || Connected to server at " + ip + " : " + to_string(portno), "");
+
+    return sockfd;
+}
+
+int serverConnect(int portno, const std::string &ip)
+{
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    {
+        return -1;
+    }
+
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(ip.c_str());
+    server_addr.sin_port = htons(portno);
+
+    // TODO: Getting stuck here
+    // add some sort of timeout?
+    cout << "Trying to connect to " << ip << " : " << portno << endl;
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        close(sockfd);
+        return -1;
+    }
+    logMessage("|| INFO || Connected to server at " + ip + " : " + to_string(portno), "");
 
     return sockfd;
 }

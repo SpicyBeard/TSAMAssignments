@@ -28,7 +28,7 @@
 #include <thread>
 #include <map>
 #include <poll.h> // Add this for poll()
-
+#include <random>
 #include <unistd.h>
 #include "utils.h"
 
@@ -41,21 +41,19 @@
 #define BACKLOG 5 // Allowed length of queue of waiting connections
 #define MAXSERVERS 8
 #define MINSERVERS 3
-
 #define MAXMISBEHAVIOUR 5
 
 std::map<int, Client *> clients;    // Lookup table for per Client information
 int main_client = -1;               // Main client socket
 std::vector<Message> messageVector; // List of messages
 std::map<string, int> messageMap;   // Map of messages
-
-// Close a client's connection and remove it from pollfds
+std::vector<struct pollfd> pollfds; // vector of pollfd instead
 
 // Process command from client on the server
 
-void clientCommand(int clientSocket, char *buffer)
+void clientCommand(int clientSocket, const std::string buffer)
 {
-    if (buffer == NULL)
+    if (buffer.empty())
     {
         std::string msg = "Invalid command from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port);
         logMessage(msg, "");
@@ -112,16 +110,16 @@ void clientCommand(int clientSocket, char *buffer)
             std::string loggedMessage = "|| SERVERS || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port);
             logMessage(loggedMessage, "");
             clients[clientSocket]->lastMessage = time(0);
-            for (int i = 1; i < 4; i++)
-            {
-                if (clients[clientSocket]->name != tokens[i] && clients[clientSocket]->ip_address != tokens[i + 1] && clients[clientSocket]->port != std::stoi(tokens[i + 2]))
-                {
-                    logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
-                    logMessage("\tServer did not send themselves as the first server", "");
-                    clients[clientSocket]->misbehaveCounter++;
-                    return;
-                }
-            }
+            // for (int i = 1; i < 4; i++)
+            // {
+            //     if (clients[clientSocket]->name != tokens[i] && clients[clientSocket]->ip_address != tokens[i + 1] && clients[clientSocket]->port != std::stoi(tokens[i + 2]))
+            //     {
+            //         logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
+            //         logMessage("\tServer did not send themselves as the first server", "");
+            //         clients[clientSocket]->misbehaveCounter++;
+            //         return;
+            //     }
+            // }
             for (size_t i = 4; i < tokens.size(); i += 3)
             {
                 Client *server = new Client(-1);
@@ -258,7 +256,7 @@ void clientCommand(int clientSocket, char *buffer)
         else
         {
             logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
-            logMessage("\tInvalid command : " + tokens[0], "");
+            logMessage("Invalid command : " + tokens[0], "");
             std::string msg = "Invalid command from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port);
             logMessage(msg, "");
             clients[clientSocket]->misbehaveCounter++;
@@ -266,9 +264,6 @@ void clientCommand(int clientSocket, char *buffer)
         }
     }
 }
-
-// Remove fd_set and declare a vector of pollfd instead
-std::vector<struct pollfd> pollfds;
 
 // Helper function to remove client from poll list
 void removeClientFromPoll(int clientSocket)
@@ -280,7 +275,7 @@ void removeClientFromPoll(int clientSocket)
 
 void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
 {
-    printf("Client closed connection: %d\n", clientSocket);
+    logMessage("|| INFO || Closing connection to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
     close(clientSocket);
 
     // Remove the socket from the pollfds vector
@@ -290,17 +285,19 @@ void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
                                  return pfd.fd == clientSocket;
                              });
     pollfds.erase(it, pollfds.end());
+    // remove client from clients map
+    clients.erase(clientSocket);
 }
 
-void addNewClient(int clientSocket, string name, string ip, int port)
+void addNewClient(int clientSocket, string name, string ip, int port, bool heloSent)
 {
     // Create a new client entry in the clients map and add to pollfds
-    cout << "Adding new client: " << name << " at " << ip << ":" << port << endl;
+    cout << "Adding new client: " + name + " at " + ip + " : " + std::to_string(port) << endl;
     clients[clientSocket] = new Client(clientSocket);
     clients[clientSocket]->name = name;
     clients[clientSocket]->ip_address = ip;
     clients[clientSocket]->port = port;
-    clients[clientSocket]->heloSent = false;
+    clients[clientSocket]->heloSent = heloSent;
     clients[clientSocket]->misbehaveCounter = 0;
     clients[clientSocket]->servers = {};
     // Add new client to the pollfds vector
@@ -312,23 +309,59 @@ void addNewClient(int clientSocket, string name, string ip, int port)
 
 void connectToClient(Client *client)
 {
+
     // return if the port is not in the range of 4000-4200 or 5000 to 5005
     if ((client->port < 4000 || client->port > 4200) && (client->port < 5000 || client->port > 5005))
     {
         return;
     }
-    int sockfd = connectToServer(client->port, client->ip_address);
-
-    // send HELO to instructor server
-    sendMessage(client->sock, "HELO,A5_42");
-    logMessage("|| HELO,A5_42 || sent to " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port), "");
-    clients[sockfd]->heloSent = true;
-    char *response = receiveMessage(sockfd);
-    if (response == NULL)
+    if (!valid_id(client->name, clients))
     {
         return;
     }
-    addNewClient(sockfd, client->name, client->ip_address, client->port);
+    cout << "Connecting to " << client->name << " at " << client->ip_address << " : " << client->port << endl;
+
+    int sockfd = connectToServer(client->port, client->ip_address);
+    if (sockfd == -1)
+    {
+        return;
+    }
+
+    // send HELO to instructor server
+    cout << "Sending HELO,A5_42 to client " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port) << endl;
+    sendMessage(*client, "HELO,A5_42");
+    logMessage("|| HELO,A5_42 || sent to " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port), "");
+    // string response = receiveMessage(sockfd);
+    // if (response.length() > 0)
+    // {
+    //     cout << "Received message from " << client->name << endl;
+    //     cout << response << endl;
+    //     clientCommand(sockfd, response);
+    // }
+    // cout << "Trying to add new client" << endl;
+    addNewClient(sockfd, client->name, client->ip_address, client->port, true);
+}
+
+Client *getRandomClient()
+{
+    if (clients.empty())
+    {
+        return nullptr; // Return nullptr if the map is empty
+    }
+
+    // Create a random number generator
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, clients.size() - 1);
+
+    // Generate a random index
+    int randomIndex = dis(gen);
+
+    // Advance the iterator to the random index
+    auto it = clients.begin();
+    std::advance(it, randomIndex);
+
+    return it->second; // Return the randomly chosen client
 }
 
 int main(int argc, char *argv[])
@@ -371,10 +404,11 @@ int main(int argc, char *argv[])
     const int keepaliveInterval = 60; // Send keepalive every minute
 
     while (!finished)
+    {
         // Establish minimum connections to begin server
         while (pollfds.size() < MINSERVERS)
         {
-            if (pollfds.size() == 1) // Only the listening socket is present
+            while (pollfds.size() == 1) // Only the listening socket is present
             {
                 // Connect to instructor server until it works
                 int firstSock = -1;
@@ -387,29 +421,27 @@ int main(int argc, char *argv[])
                         sleep(1); // Wait for 1 second before retrying
                     }
                 }
-                addNewClient(firstSock, "Instr_1", "130.208.246.249", 5001);
+                addNewClient(firstSock, "Instr_1", "130.208.246.249", 5001, false);
                 // Send HELO to instructor server
                 sendMessage(*clients[firstSock], "HELO,A5_42");
                 logMessage("|| HELO,A5_42 || sent to Instr_1 at 130.208.246.249 : 5001", "");
                 clients[firstSock]->heloSent = true;
                 // Receive HELO from Instr_1
-                char *response = receiveMessage(firstSock);
+                string response = receiveMessage(firstSock);
                 clientCommand(firstSock, response);
                 // Receive SERVERS from Instr_1
+
                 response = receiveMessage(firstSock);
                 clientCommand(firstSock, response);
             }
             // Pick a random server from the list map of clients
-            int clientSize = clients.size();
-            int randomIndex = rand() % clientSize;
-            auto it = clients.begin();
-            std::advance(it, randomIndex);
-            for (auto client : clients)
+            Client *randomClient = getRandomClient();
+            for (auto server : randomClient->servers)
             {
-                connectToClient(client.second);
+                connectToClient(server);
             }
         }
-    {
+
         // Poll for incoming data
         int pollCount = poll(pollfds.data(), pollfds.size(), 1000); // 1 second timeout
         if (pollCount < 0)
@@ -433,15 +465,18 @@ int main(int argc, char *argv[])
                         perror("Accept failed");
                         continue;
                     }
-                    printf("New connection accepted: %d\n", clientSock);
+                    // TODO: fix this, the port is not correct
+                    cout << "New connection accepted: " + std::to_string(clientSock) << endl;
                     // Add new client to clients map and pollfds vector
+                    std::pair<std::string, int> source= getSourceIpandPort(clientSock);
                     clients[clientSock] = new Client(clientSock);
-                    clients[clientSock]->ip_address = inet_ntoa(client.sin_addr);
-                    clients[clientSock]->port = ntohs(client.sin_port);
+                    clients[clientSock]->ip_address = source.first;
+                    clients[clientSock]->port = source.second;
                     struct pollfd newClientPollFD;
                     newClientPollFD.fd = clientSock;
                     newClientPollFD.events = POLLIN | POLLOUT;
                     pollfds.push_back(newClientPollFD);
+                    cout << "Added new client: " + clients[clientSock]->name + " at " + clients[clientSock]->ip_address + " : " + std::to_string(clients[clientSock]->port) << endl;
                 }
                 else
                 {
@@ -467,7 +502,6 @@ int main(int argc, char *argv[])
         {
             if (difftime(currentTime, it->second->lastMessage) > 300) // 5 minutes
             {
-                logMessage("Removing inactive client: " + it->second->name, "");
                 closeClient(it->first, pollfds);
                 delete it->second;
                 it = clients.erase(it);
@@ -483,6 +517,7 @@ int main(int argc, char *argv[])
         {
             if (it->second->misbehaveCounter >= MAXMISBEHAVIOUR)
             {
+                // TODO: causes segfault
                 logMessage("Removing misbehaving client: " + it->second->name, "");
                 closeClient(it->first, pollfds);
                 delete it->second;
@@ -495,21 +530,19 @@ int main(int argc, char *argv[])
         }
 
         // Remove clients if we go over the maximum
-        while (pollfds.size() > MAXSERVERS)
+
+        while (clients.size() > MAXSERVERS + 1)
         {
             // Remove a random server from the list until we have 8 servers
-            int clientSize = clients.size();
-            int randomIndex = rand() % clientSize;
-            auto it = clients.begin();
-            std::advance(it, randomIndex);
-            closeClient(it->first, pollfds);
-            delete it->second;
-            clients.erase(it);
+            cout << "removing a random client" << endl;
+            Client *randomClient = getRandomClient();
+            closeClient(randomClient->sock, pollfds);
         }
 
         // Send keepalive messages periodically
         if (difftime(currentTime, lastKeepaliveTime) >= keepaliveInterval)
         {
+            cout << "|| INFO || Sending keepalive messages" << endl;
             for (auto &client : clients)
             {
                 sendKeepalive(*client.second, messageMap[client.second->name]);
@@ -519,6 +552,7 @@ int main(int argc, char *argv[])
     }
 
     // Clean up and close all connections
+    cout << "Closing all connections" << endl;
     for (auto &client : clients)
     {
         close(client.first);

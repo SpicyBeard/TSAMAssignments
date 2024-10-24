@@ -58,13 +58,13 @@ int open_socket(int portno, string ip);
 
 void sendMessage(Client client, const std::string &msg);
 
-char *receiveMessage(int sockfd);
+string receiveMessage(int sockfd);
 
 pair<string, int> getSourceIpandPort(int sockfd);
 
 bool valid_id(string id, map<int, Client *> &clients);
 
-vector<vector<string>> checkMessageContentAndProcess(char *buffer);
+vector<vector<string>> checkMessageContentAndProcess(const string &input);
 
 void logMessage(const std::string &msg, std::string filename);
 
