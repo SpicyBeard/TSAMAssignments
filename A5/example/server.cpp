@@ -59,7 +59,7 @@ std::vector<std::vector<std::string>> processTokens(char *buffer)
 void handleRattatoskurCommand(int clientSocket)
 {
     std::string msg = "Main Client connected to Server";
-    logMessage(msg, "");
+    logMessage(msg, "", true);
     send(clientSocket, msg.c_str(), msg.length(), 0);
     main_client = clientSocket;
 }
@@ -68,7 +68,7 @@ void handleHeloCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
     if (tokens.size() == 2 && valid_id(tokens[1], clients))
     {
-        logMessage("|| HELO," + tokens[1] + " || received", "");
+        logMessage("|| HELO," + tokens[1] + " || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
         clients[clientSocket]->lastMessage = time(0);
         if (clients[clientSocket]->name != tokens[1])
         {
@@ -78,7 +78,7 @@ void handleHeloCommand(int clientSocket, const std::vector<std::string> &tokens)
         {
             clients[clientSocket]->heloSent = true;
             sendMessage(*clients[clientSocket], "HELO,A5_42");
-            logMessage("|| HELO,A5_42 || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
+            logMessage("|| HELO,A5_42 || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
         }
         // Construct the SERVERS response and handle the HELO sent flag
         std::string response = "SERVERS,A5_42,130.208.246.249,4042;";
@@ -99,12 +99,11 @@ void handleServersCommand(int clientSocket, const std::vector<std::string> &toke
     {
         clients[clientSocket]->lastMessage = time(0);
 
-        logMessage("|| SERVERS || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
+        logMessage("|| SERVERS || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
         // check if the first server matches the current one
         if (clients[clientSocket]->name != tokens[1])
         {
-            logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
-            logMessage("\tServer did not send themselves as the first server", "");
+            logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + "\n\tServer did not send themselves as the first server", "", true);
             clients[clientSocket]->misbehaveCounter++;
             return;
         }
@@ -125,13 +124,13 @@ void handleKeepAliveCommand(int clientSocket, const std::vector<std::string> &to
     if (tokens.size() == 2)
     {
         std::string msg = "|| KEEPALIVE || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + " with " + tokens[1] + " messages";
-        logMessage(msg, "");
+        logMessage(msg, "", true);
         clients[clientSocket]->lastMessage = time(0);
         if (std::stoi(tokens[1]) > 0)
         {
             // send GETMSGS to client
             sendMessage(clientSocket, "GETMSGS,A5_42");
-            logMessage("|| GETMSGS || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
+            logMessage("|| GETMSGS || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
         }
     }
 }
@@ -143,7 +142,7 @@ void handleListServersCommand(int clientSocket)
     {
         msg += server.second->name + ": " + std::to_string(server.second->sock) + ", ";
     }
-    logMessage(msg, "client.log");
+    logMessage(msg, "client.log", true);
     send(clientSocket, msg.c_str(), msg.length(), 0);
 }
 
@@ -154,10 +153,10 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
 
         if (tokens[1] == "A5_42")
         {
-            logMessage("Received message to " + tokens[2] + " FROM" + clients[clientSocket]->name, "");
-            logMessage("Received message from" + clients[clientSocket]->name + " Message Content:" + tokens[3], "Message_log.txt");
+            logMessage("Received message to " + tokens[2] + " FROM" + clients[clientSocket]->name, "", true);
+            logMessage("Received message from" + clients[clientSocket]->name + " Message Content:" + tokens[3], "messages.log", true);
         }
-        logMessage("|| SENDMSG || received from " + clients[clientSocket]->name + " to group number " + tokens[2], "");
+        logMessage("|| SENDMSG || received from " + clients[clientSocket]->name + " to group number " + tokens[2], "", true);
         clients[clientSocket]->lastMessage = time(0);
 
         std::time_t now = std::time(0);
@@ -171,7 +170,7 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
             if (client.second->name == tokens[2])
             {
                 sendMessage(client.second->sock, tokens[0] + "," + tokens[1] + "," + tokens[2] + "," + tokens[3]);
-                logMessage("|| SENDMSG || sent to " + client.second->name + " at " + client.second->ip_address + " : " + std::to_string(client.second->port) + " from group " + tokens[1], "");
+                logMessage("|| SENDMSG || sent to " + client.second->name + " at " + client.second->ip_address + " : " + std::to_string(client.second->port) + " from group " + tokens[1], "", true);
                 return;
             }
         }
@@ -190,7 +189,7 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
 
 void handleStatusReqCommand(int clientSocket)
 {
-    logMessage("|| STATUSREQ || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
+    logMessage("|| STATUSREQ || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
     clients[clientSocket]->lastMessage = time(0);
 
     std::string response = "STATUSRESP,";
@@ -200,12 +199,12 @@ void handleStatusReqCommand(int clientSocket)
     }
 
     sendMessage(*clients[clientSocket], response);
-    logMessage("|| STATUSRESP || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
+    logMessage("|| STATUSRESP || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
 }
 
 void handleStatusRespCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
-    logMessage("|| STATUSRESP || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
+    logMessage("|| STATUSRESP || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
     clients[clientSocket]->lastMessage = time(0);
 
     for (size_t i = 1; i < tokens.size(); i += 2)
@@ -213,7 +212,7 @@ void handleStatusRespCommand(int clientSocket, const std::vector<std::string> &t
         if (tokens[i] == "A5_42")
         {
             sendMessage(clientSocket, "GETMSGS,A5_42");
-            logMessage("|| GETMSGS || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + " for " + tokens[i + 1], "");
+            logMessage("|| GETMSGS || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + " for " + tokens[i + 1], "", true);
         }
         else
         {
@@ -222,7 +221,7 @@ void handleStatusRespCommand(int clientSocket, const std::vector<std::string> &t
                 if (client.second->name == tokens[i])
                 {
                     sendMessage(clientSocket, ("GETMSGS," + tokens[i]).c_str());
-                    logMessage("|| GETMSGS || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + " for " + tokens[i + 1], "");
+                    logMessage("|| GETMSGS || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + " for " + tokens[i + 1], "", true);
                 }
             }
         }
@@ -233,9 +232,7 @@ void handleGetMsgsCommand(int clientSocket, const std::vector<std::string> &toke
 {
     if (tokens.size() == 2 && connectedClient(clientSocket, clients))
     {
-        std::string msg = "|| GETMSGS || received from group number " + tokens[1] + " requested by: " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port);
-        logMessage(msg, "");
-
+        logMessage("|| GETMSGS || received from group number " + tokens[1] + " requested by: " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + "", "", true);
         clients[clientSocket]->lastMessage = time(0);
         if (messageMap[tokens[1]] > 0)
         {
@@ -245,11 +242,11 @@ void handleGetMsgsCommand(int clientSocket, const std::vector<std::string> &toke
                 {
                     std::string response = "SENDMSG," + message.to + "," + message.from + "," + message.message;
                     sendMessage(*clients[clientSocket], response);
-                    logMessage("|| SENDMSG || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + " from group " + message.from, "");
+                    logMessage("|| SENDMSG || sent to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + " from group " + message.from, "", true);
                 }
             }
         }
-        logMessage("|| INFO || No messages found for group number " + tokens[1], "");
+        logMessage("|| INFO || No messages found for group number " + tokens[1], "", true);
     }
 }
 
@@ -258,14 +255,14 @@ void handleGetMsgCommand(int clientSocket, const std::vector<std::string> &token
     if (tokens.size() == 2 && main_client == clientSocket)
     {
         std::string msg = "|| GETMSG || getting message from group number " + tokens[1] + "requested by main client";
-        logMessage(msg, "");
+        logMessage(msg, "", true);
         for (const auto &message : messageVector)
         {
             if (message.to == tokens[1])
             {
                 std::string response = "SENDMSG," + message.to + "," + message.from + "," + message.message;
                 sendMessage(clientSocket, response);
-                logMessage("|| SENDMSG || sent to main client from group " + message.from, "");
+                logMessage("|| SENDMSG || sent to main client from group " + message.from, "", true);
             }
         }
     }
@@ -275,8 +272,8 @@ void handleInvalidCommand(int clientSocket, string buffer)
 {
     if (buffer.empty())
     {
-        std::string msg = "Invalid command from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port);
-        logMessage(msg, "");
+        std::string msg = "|| ERROR ||Invalid command from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port);
+        logMessage(msg, "", true);
         clients[clientSocket]->misbehaveCounter++;
     }
 }
@@ -333,6 +330,7 @@ void dispatchCommand(int clientSocket, const std::vector<std::string> &tokens)
 void clientCommand(int clientSocket, std::string buffer)
 {
     handleInvalidCommand(clientSocket, buffer);
+    logMessage(buffer + "|| from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "recieved.log", false);
 
     std::vector<std::vector<std::string>> all_tokens = checkMessageContentAndProcess(buffer);
 
@@ -352,7 +350,8 @@ void removeClientFromPoll(int clientSocket)
 
 void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
 {
-    logMessage("|| INFO || Closing connection to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "");
+    // TODO: causes a segmentation fault
+    logMessage("|| INFO || Closing connection to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
     close(clientSocket);
 
     // Remove the socket from the pollfds vector
@@ -363,7 +362,7 @@ void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
                              });
     pollfds.erase(it, pollfds.end());
     // remove client from clients map
-    clients.erase(clientSocket);
+    clients.erase(clientSocket); // This is probably causing the segfault
 }
 
 void addNewClient(int clientSocket, string name, string ip, int port, bool heloSent)
@@ -371,12 +370,9 @@ void addNewClient(int clientSocket, string name, string ip, int port, bool heloS
     // Create a new client entry in the clients map and add to pollfds
     cout << "Adding new client: " + name + " at " + ip + " : " + std::to_string(port) << endl;
     clients[clientSocket] = new Client(clientSocket);
-    clients[clientSocket]->name = name;
     clients[clientSocket]->ip_address = ip;
     clients[clientSocket]->port = port;
     clients[clientSocket]->heloSent = heloSent;
-    clients[clientSocket]->misbehaveCounter = 0;
-    clients[clientSocket]->servers = {};
     // Add new client to the pollfds vector
     struct pollfd newClientPollFD;
     newClientPollFD.fd = clientSocket;
@@ -404,10 +400,13 @@ void connectToClient(Client *client)
         return;
     }
 
+    // NOTE: maybe wait to add the user, just send the HELO and wait for the response, or maybe receiving here would help?
+    addNewClient(sockfd, client->name, client->ip_address, client->port, false);
     // send HELO to instructor server
     cout << "Sending HELO,A5_42 to client " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port) << endl;
     sendMessage(*client, "HELO,A5_42");
-    logMessage("|| HELO,A5_42 || sent to " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port), "");
+    logMessage("|| HELO,A5_42 || sent to " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port), "", true);
+    clients[sockfd]->heloSent = true;
     // string response = receiveMessage(sockfd);
     // if (response.length() > 0)
     // {
@@ -416,7 +415,6 @@ void connectToClient(Client *client)
     //     clientCommand(sockfd, response);
     // }
     // cout << "Trying to add new client" << endl;
-    addNewClient(sockfd, client->name, client->ip_address, client->port, true);
 }
 
 Client *getRandomClient()
@@ -469,6 +467,11 @@ int main(int argc, char *argv[])
         printf("Listening on port: %d\n", atoi(argv[1]));
     }
 
+    logMessage("", "", false);
+    logMessage("", "recieved.log", false);
+    logMessage("", "sent.log", false);
+    logMessage("", "messages.log", false);
+    logMessage("", "client.log", false);
     // Add listening socket to the pollfds vector
     struct pollfd listenPollFD;
     listenPollFD.fd = listenSock;
@@ -483,7 +486,7 @@ int main(int argc, char *argv[])
     while (!finished)
     {
         // Establish minimum connections to begin server
-        while (pollfds.size() < MINSERVERS)
+        while (clients.size() < MINSERVERS)
         {
             while (pollfds.size() == 1) // Only the listening socket is present
             {
@@ -495,13 +498,13 @@ int main(int argc, char *argv[])
                     if (firstSock == -1)
                     {
                         cout << "Failed to connect to Instr_1, retrying in 1 second" << endl;
-                        sleep(1); // Wait for 1 second before retrying
+                        sleep(10); // Wait for 1 second before retrying
                     }
                 }
                 addNewClient(firstSock, "Instr_1", "130.208.246.249", 5001, false);
                 // Send HELO to instructor server
                 sendMessage(*clients[firstSock], "HELO,A5_42");
-                logMessage("|| HELO,A5_42 || sent to Instr_1 at 130.208.246.249 : 5001", "");
+                logMessage("|| HELO,A5_42 || sent to Instr_1 at 130.208.246.249 : 5001", "", true);
                 clients[firstSock]->heloSent = true;
                 // Receive HELO from Instr_1
                 string response = receiveMessage(firstSock);
@@ -513,6 +516,11 @@ int main(int argc, char *argv[])
             }
             // Pick a random server from the list map of clients
             Client *randomClient = getRandomClient();
+            if (randomClient == nullptr)
+            {
+                randomClient = clients.begin()->second;
+            }
+            // todo: check if random client exists
             for (auto server : randomClient->servers)
             {
                 connectToClient(server);
@@ -562,7 +570,7 @@ int main(int argc, char *argv[])
                     if (bytesRecieved <= 0)
                     {
                         // Close client connection if error or disconnect
-                        closeClient(pfd.fd, pollfds);
+                        clients[pfd.fd]->misbehaveCounter++;
                     }
                     else
                     {
@@ -595,7 +603,7 @@ int main(int argc, char *argv[])
             if (it->second->misbehaveCounter >= MAXMISBEHAVIOUR)
             {
                 // TODO: causes segfault
-                logMessage("Removing misbehaving client: " + it->second->name, "");
+                logMessage("Removing misbehaving client: " + it->second->name, "", true);
                 closeClient(it->first, pollfds);
                 delete it->second;
                 it = clients.erase(it);
@@ -622,7 +630,10 @@ int main(int argc, char *argv[])
             cout << "|| INFO || Sending keepalive messages" << endl;
             for (auto &client : clients)
             {
-                sendKeepalive(*client.second, messageMap[client.second->name]);
+                if (client.second->sock > !main_client)
+                {
+                    sendKeepalive(*client.second, messageMap[client.second->name]);
+                }
             }
             lastKeepaliveTime = currentTime;
         }

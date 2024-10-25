@@ -23,6 +23,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <netdb.h>
+#include <fcntl.h>
 
 using namespace std;
 
@@ -66,7 +67,7 @@ bool valid_id(string id, map<int, Client *> &clients);
 
 vector<vector<string>> checkMessageContentAndProcess(const string &input);
 
-void logMessage(const std::string &msg, std::string filename);
+void logMessage(const std::string &msg, std::string filename, bool print);
 
 bool connectedClient(int sock, map<int, Client *> &clients);
 

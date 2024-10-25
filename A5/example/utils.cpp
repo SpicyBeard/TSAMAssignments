@@ -44,7 +44,7 @@ vector<vector<string>> checkMessageContentAndProcess(const string &input)
     return commands;
 }
 
-void logMessage(const string &msg, string filename = "")
+void logMessage(const string &msg, string filename, bool printToConsole)
 {
     time_t now = time(0);
     char timeStr[100];
@@ -68,7 +68,10 @@ void logMessage(const string &msg, string filename = "")
         memset(timeStr, 0, sizeof(timeStr));
         strftime(timeStr, sizeof(timeStr), "%d-%m-%Y %H:%M:%S", localtime(&now));
         logfile << timeStr << ": " << msg << endl;
-        cout << timeStr << ": " << msg << endl;
+        if (printToConsole)
+        {
+            cout << timeStr << ": " << msg << endl;
+        }
         logfile.close();
     }
 }
@@ -113,6 +116,7 @@ bool valid_id(string id, map<int, Client *> &clients)
 void sendMessage(Client client, const string &msg)
 {
     cout << "Sending message to " + client.name + " at " + client.ip_address + " : " + to_string(client.port) << endl;
+    logMessage(msg + " || to " + client.name + " at " + client.ip_address + " : " + to_string(client.port), "sent.log", false);
     char messageServer[msg.length() + 2];
     bzero(messageServer, sizeof(messageServer));
     messageServer[0] = 0x01;
@@ -203,16 +207,50 @@ int connectToServer(int portno, const std::string &ip)
     server_addr.sin_addr.s_addr = inet_addr(ip.c_str());
     server_addr.sin_port = htons(portno);
 
-    // TODO: Getting stuck here
-    // add some sort of timeout?
+    // Set the socket to non-blocking mode
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+
+    // Start the connection attempt
     cout << "Trying to connect to " << ip << " : " << portno << endl;
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    int result = connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    if (result < 0 && errno != EINPROGRESS)
     {
         close(sockfd);
         return -1;
     }
-    logMessage("|| INFO || Connected to server at " + ip + " : " + to_string(portno), "");
 
+    // Use select to wait for the connection to complete or timeout
+    fd_set writefds;
+    FD_ZERO(&writefds);
+    FD_SET(sockfd, &writefds);
+
+    struct timeval timeout;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+
+    result = select(sockfd + 1, NULL, &writefds, NULL, &timeout);
+    if (result <= 0)
+    {
+        // Timeout or error
+        close(sockfd);
+        return -1;
+    }
+
+    // Check for errors
+    int so_error;
+    socklen_t len = sizeof(so_error);
+    getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &so_error, &len);
+    if (so_error != 0)
+    {
+        close(sockfd);
+        return -1;
+    }
+
+    // Set the socket back to blocking mode
+    fcntl(sockfd, F_SETFL, flags);
+
+    cout << "Connected to server at " << ip << " : " << portno << endl;
     return sockfd;
 }
 
@@ -234,10 +272,11 @@ int serverConnect(int portno, const std::string &ip)
     cout << "Trying to connect to " << ip << " : " << portno << endl;
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
+        perror("Socket error");
         close(sockfd);
         return -1;
     }
-    logMessage("|| INFO || Connected to server at " + ip + " : " + to_string(portno), "");
+    logMessage("|| INFO || Connected to server at " + ip + " : " + to_string(portno), "", true);
 
     return sockfd;
 }
