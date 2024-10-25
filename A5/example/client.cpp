@@ -29,6 +29,9 @@
 
 // uint8_t START = 0x01;
 // uint8_t END = 0x04;
+#define SENDMSG 1
+#define LISTSERVERS 2
+#define GETMSG 3
 
 // Threaded function for handling responss from server
 
@@ -56,6 +59,55 @@ void listenServer(int serverSocket)
             std::cout << timeStr << " : " << buffer << std::endl;
         }
     }
+}
+
+void displayMenu()
+{
+    std::cout << "Please select one of the following options:" << std::endl;
+    std::cout << "1. List Servers" << std::endl;
+    std::cout << "2. Send Message" << std::endl;
+    std::cout << "3. Get Message" << std::endl;
+    std::cout << "4. Exit" << std::endl;
+}
+// get user command
+std::string sendMsg()
+{
+    std::string to;
+    std::string message;
+    std::cout << "Enter the user you want to send the message to: ";
+    std::cin >> to;
+    std::cout << "Enter the message you want to send: ";
+    std::cin >> message;
+    std::string msg = "SENDMSG," + to + "," + message;
+    return msg;
+}
+
+std::string getMsg()
+{
+    std::string group;
+    std::cout << "Enter the group you want to get the message from: ";
+    std::cin >> group;
+    std::string msg = "GETMSG," + group;
+    return msg;
+}
+
+std::string listServers()
+{
+    return "LISTSERVERS";
+}
+
+void sendPasscode(int serverSocket)
+{
+    std::string passcode = "Rattatoskur";
+    // add 0x01 to the start of the message and 0x04 to the end
+    char messageServer[5000];
+    bzero(messageServer, sizeof(messageServer));
+    messageServer[0] = 0x01;
+    // place the buffer in the messageServer after messageServer[0]
+    memcpy(messageServer + 1, passcode.c_str(), passcode.length());
+    messageServer[passcode.length() + 1] = 0x04;
+    send(serverSocket, messageServer, strlen(messageServer), 0);
+    std::cout << "Sent passcode to server" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -123,13 +175,34 @@ int main(int argc, char *argv[])
 
     // Listen and print replies from server
     std::thread serverThread(listenServer, serverSocket);
+    sendPasscode(serverSocket);
 
     finished = false;
     while (!finished)
     {
-        bzero(buffer, sizeof(buffer));
+        displayMenu();
+        int choice;
+        std::cin >> choice;
+        std::string msg;
+        switch (choice)
+        {
+        case SENDMSG:
+            msg = sendMsg();
+            break;
+        case LISTSERVERS:
+            msg = listServers();
+            break;
+        case GETMSG:
+            msg = getMsg();
+            break;
+        default:
+            finished = true;
+            break;
+        }
+        // get user command
 
-        fgets(buffer, sizeof(buffer), stdin);
+        bzero(buffer, sizeof(buffer));
+        memcpy(buffer, msg.c_str(), msg.length());
         // add 0x01 to the start of the message and 0x04 to the end
         char messageServer[5000];
         bzero(messageServer, sizeof(messageServer));
