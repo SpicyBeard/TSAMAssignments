@@ -29,8 +29,8 @@
 
 // uint8_t START = 0x01;
 // uint8_t END = 0x04;
-#define SENDMSG 1
-#define LISTSERVERS 2
+#define LISTSERVERS 1
+#define SENDMSG 2
 #define GETMSG 3
 
 // Threaded function for handling responss from server
@@ -184,6 +184,7 @@ int main(int argc, char *argv[])
         int choice;
         std::cin >> choice;
         std::string msg;
+
         switch (choice)
         {
         case SENDMSG:
@@ -196,7 +197,7 @@ int main(int argc, char *argv[])
             msg = getMsg();
             break;
         default:
-            finished = true;
+            exit(0);
             break;
         }
         // get user command
@@ -207,11 +208,14 @@ int main(int argc, char *argv[])
         char messageServer[5000];
         bzero(messageServer, sizeof(messageServer));
         messageServer[0] = 0x01;
+
         // place the buffer in the messageServer after messageServer[0]
         memcpy(messageServer + 1, buffer, strlen(buffer));
         messageServer[strlen(buffer) + 1] = 0x04;
 
+        std::cout << "Sending msg: " << msg << std::endl;
         nwrite = send(serverSocket, messageServer, strlen(messageServer), 0);
+
         std::time_t now = std::time(0);
         char timeStr[100];
         std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
@@ -222,5 +226,7 @@ int main(int argc, char *argv[])
             perror("send() to server failed: ");
             finished = true;
         }
+
+        sleep(1);
     }
 }
