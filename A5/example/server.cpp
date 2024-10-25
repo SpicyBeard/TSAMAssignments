@@ -84,7 +84,7 @@ void handleHeloCommand(int clientSocket, const std::vector<std::string> &tokens)
         std::string response = "SERVERS,A5_42,130.208.246.249,4042;";
         for (const auto &server : clients)
         {
-            if (server.second->name != clients[clientSocket]->name)
+            if (server.second->sock != main_client)
             {
                 response += server.second->name + "," + server.second->ip_address + "," + std::to_string(server.second->port) + ";";
             }
@@ -140,7 +140,10 @@ void handleListServersCommand(int clientSocket)
     std::string msg = "Listing all servers we are connected to: ";
     for (const auto &server : clients)
     {
-        msg += server.second->name + ": " + std::to_string(server.second->sock) + ", ";
+        if (server.second->sock != main_client)
+        {
+            msg += server.second->name + " at " + server.second->ip_address + " : " + std::to_string(server.second->port) + ", ";
+        }
     }
     logMessage(msg, "client.log", true);
     send(clientSocket, msg.c_str(), msg.length(), 0);
@@ -350,19 +353,23 @@ void removeClientFromPoll(int clientSocket)
 
 void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
 {
-    // TODO: causes a segmentation fault
-    logMessage("|| INFO || Closing connection to " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
+    // Close the client socket
     close(clientSocket);
 
     // Remove the socket from the pollfds vector
     auto it = std::remove_if(pollfds.begin(), pollfds.end(),
-                             [clientSocket](struct pollfd &pfd)
+                             [clientSocket](const struct pollfd &pfd)
                              {
                                  return pfd.fd == clientSocket;
                              });
     pollfds.erase(it, pollfds.end());
-    // remove client from clients map
-    clients.erase(clientSocket); // This is probably causing the segfault
+}
+
+void removeClient(std::map<int, Client *> &clients, std::vector<struct pollfd> &pollfds, std::map<int, Client *>::iterator &it)
+{
+    closeClient(it->first, pollfds);
+    delete it->second;
+    it = clients.erase(it);
 }
 
 void addNewClient(int clientSocket, string name, string ip, int port, bool heloSent)
@@ -552,31 +559,28 @@ int main(int argc, char *argv[])
                     }
                     // TODO: fix this, the port is not correct
                     cout << "New connection accepted: " + std::to_string(clientSock) << endl;
-                    // Add new client to clients map and pollfds vector
-                    std::pair<std::string, int> source = getSourceIpandPort(clientSock);
-                    clients[clientSock] = new Client(clientSock);
-                    clients[clientSock]->ip_address = source.first;
-                    clients[clientSock]->port = source.second;
-                    struct pollfd newClientPollFD;
-                    newClientPollFD.fd = clientSock;
-                    newClientPollFD.events = POLLIN | POLLOUT;
-                    pollfds.push_back(newClientPollFD);
-                    cout << "Added new client: " + clients[clientSock]->name + " at " + clients[clientSock]->ip_address + " : " + std::to_string(clients[clientSock]->port) << endl;
+                    if (ntohs(client.sin_port) != 4042)
+                    {
+                        // Add new client to clients map and pollfds vector
+                        clients[clientSock] = new Client(clientSock);
+                        clients[clientSock]->ip_address = inet_ntoa(client.sin_addr);
+                        clients[clientSock]->port = ntohs(client.sin_port);
+                        struct pollfd newClientPollFD;
+                        newClientPollFD.fd = clientSock;
+                        newClientPollFD.events = POLLIN | POLLOUT;
+                        pollfds.push_back(newClientPollFD);
+                        cout << "Added new client: " + clients[clientSock]->name + " at " + clients[clientSock]->ip_address + " : " + std::to_string(clients[clientSock]->port) << endl;
+                    }
                 }
                 else
                 {
                     // Handle incoming message from client
-                    int bytesRecieved = recv(pfd.fd, buffer, sizeof(buffer), 0);
-                    if (bytesRecieved <= 0)
-                    {
-                        // Close client connection if error or disconnect
-                        clients[pfd.fd]->misbehaveCounter++;
-                    }
-                    else
+                    if (recv(pfd.fd, buffer, sizeof(buffer), 0))
                     {
                         // Process client command
                         clientCommand(pfd.fd, buffer);
                     }
+                    memset(buffer, 0, sizeof(buffer));
                 }
             }
         }
@@ -603,10 +607,7 @@ int main(int argc, char *argv[])
             if (it->second->misbehaveCounter >= MAXMISBEHAVIOUR)
             {
                 // TODO: causes segfault
-                logMessage("Removing misbehaving client: " + it->second->name, "", true);
-                closeClient(it->first, pollfds);
-                delete it->second;
-                it = clients.erase(it);
+                removeClient(clients, pollfds, it);
             }
             else
             {
@@ -630,10 +631,7 @@ int main(int argc, char *argv[])
             cout << "|| INFO || Sending keepalive messages" << endl;
             for (auto &client : clients)
             {
-                if (client.second->sock > !main_client)
-                {
-                    sendKeepalive(*client.second, messageMap[client.second->name]);
-                }
+                sendKeepalive(*client.second, messageMap[client.second->name]);
             }
             lastKeepaliveTime = currentTime;
         }
