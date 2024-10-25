@@ -68,12 +68,12 @@ void handleHeloCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
     if (tokens.size() == 2 && valid_id(tokens[1], clients))
     {
+        clients[clientSocket]->name = tokens[1];
         logMessage("|| HELO," + tokens[1] + " || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
         clients[clientSocket]->lastMessage = time(0);
-        if (clients[clientSocket]->name != tokens[1])
-        {
-            clients[clientSocket]->name = tokens[1];
-        }
+        std::pair<string, int> ip_port = getSourceIpandPort(clientSocket);
+        clients[clientSocket]->ip_address = ip_port.first;
+        clients[clientSocket]->port = ip_port.second;
         if (!clients[clientSocket]->heloSent)
         {
             clients[clientSocket]->heloSent = true;
@@ -151,7 +151,38 @@ void handleListServersCommand(int clientSocket)
 
 void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
-    if (tokens.size() == 4 && connectedClient(clientSocket, clients))
+    if (tokens.size() == 3 && clientSocket == main_client)
+    {
+        logMessage("|| SENDMSG || received from main client to group number " + tokens[1], "", true);
+        clients[clientSocket]->lastMessage = time(0);
+
+        std::time_t now = std::time(0);
+        char timeStr[100];
+        strftime(timeStr, sizeof(timeStr), "%d-%m-%Y", localtime(&now));
+        Message message(tokens[2], "A5_42", tokens[1], timeStr);
+
+        // check if we have the group number in clients list
+        for (auto client : clients)
+        {
+            if (client.second->name == tokens[1])
+            {
+                sendMessage(client.second->sock, tokens[0] + tokens[1] + ",A5_42," + "," + tokens[2]);
+                logMessage("|| SENDMSG || sent to " + client.second->name + " at " + client.second->ip_address + " : " + std::to_string(client.second->port) + " from group A4_42", "", true);
+                return;
+            }
+        }
+        messageVector.push_back(message);
+        if (messageMap.find(tokens[1]) == messageMap.end())
+        {
+            messageMap[tokens[1]] = 1;
+        }
+        else
+        {
+            messageMap[tokens[1]]++;
+        }
+        return;
+    }
+    else if (tokens.size() == 4 && connectedClient(clientSocket, clients))
     {
 
         if (tokens[1] == "A5_42")
@@ -303,7 +334,7 @@ void dispatchCommand(int clientSocket, const std::vector<std::string> &tokens)
     {
         handleListServersCommand(clientSocket);
     }
-    else if (tokens[0] == "SENDMSG" && main_client == clientSocket)
+    else if (tokens[0] == "SENDMSG")
     {
         handleSendMsgCommand(clientSocket, tokens);
     }
@@ -375,7 +406,7 @@ void removeClient(std::map<int, Client *> &clients, std::vector<struct pollfd> &
 void addNewClient(int clientSocket, string name, string ip, int port, bool heloSent)
 {
     // Create a new client entry in the clients map and add to pollfds
-    cout << "Adding new client: " + name + " at " + ip + " : " + std::to_string(port) << endl;
+    std::cout << "Adding new client: " + name + " at " + ip + " : " + std::to_string(port) << std::endl;
     clients[clientSocket] = new Client(clientSocket);
     clients[clientSocket]->ip_address = ip;
     clients[clientSocket]->port = port;
@@ -399,7 +430,7 @@ void connectToClient(Client *client)
     {
         return;
     }
-    cout << "Connecting to " << client->name << " at " << client->ip_address << " : " << client->port << endl;
+    std::cout << "Connecting to " << client->name << " at " << client->ip_address << " : " << client->port << std::endl;
 
     int sockfd = connectToServer(client->port, client->ip_address);
     if (sockfd == -1)
@@ -410,7 +441,7 @@ void connectToClient(Client *client)
     // NOTE: maybe wait to add the user, just send the HELO and wait for the response, or maybe receiving here would help?
     addNewClient(sockfd, client->name, client->ip_address, client->port, false);
     // send HELO to instructor server
-    cout << "Sending HELO,A5_42 to client " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port) << endl;
+    std::cout << "Sending HELO,A5_42 to client " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port) << std::endl;
     sendMessage(*client, "HELO,A5_42");
     logMessage("|| HELO,A5_42 || sent to " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port), "", true);
     clients[sockfd]->heloSent = true;
@@ -504,7 +535,7 @@ int main(int argc, char *argv[])
                     firstSock = connectToServer(5001, "130.208.246.249");
                     if (firstSock == -1)
                     {
-                        cout << "Failed to connect to Instr_1, retrying in 1 second" << endl;
+                        std::cout << "Failed to connect to Instr_1, retrying in 1 second" << std::endl;
                         sleep(10); // Wait for 1 second before retrying
                     }
                 }
@@ -558,18 +589,19 @@ int main(int argc, char *argv[])
                         continue;
                     }
                     // TODO: fix this, the port is not correct
-                    cout << "New connection accepted: " + std::to_string(clientSock) << endl;
+                    std::cout << "New connection accepted: " + std::to_string(clientSock) << std::endl;
                     if (ntohs(client.sin_port) != 4042)
                     {
                         // Add new client to clients map and pollfds vector
+                        std::pair<string, int> ip_port = getSourceIpandPort(clientSock);
                         clients[clientSock] = new Client(clientSock);
-                        clients[clientSock]->ip_address = inet_ntoa(client.sin_addr);
-                        clients[clientSock]->port = ntohs(client.sin_port);
+                        clients[clientSock]->ip_address = ip_port.first;
+                        clients[clientSock]->port = ip_port.second;
                         struct pollfd newClientPollFD;
                         newClientPollFD.fd = clientSock;
                         newClientPollFD.events = POLLIN | POLLOUT;
                         pollfds.push_back(newClientPollFD);
-                        cout << "Added new client: " + clients[clientSock]->name + " at " + clients[clientSock]->ip_address + " : " + std::to_string(clients[clientSock]->port) << endl;
+                        std::cout << "Added new client: " + clients[clientSock]->name + " at " + clients[clientSock]->ip_address + " : " + std::to_string(clients[clientSock]->port) << std::endl;
                     }
                 }
                 else
@@ -591,9 +623,7 @@ int main(int argc, char *argv[])
         {
             if (difftime(currentTime, it->second->lastMessage) > 300) // 5 minutes
             {
-                closeClient(it->first, pollfds);
-                delete it->second;
-                it = clients.erase(it);
+                removeClient(clients, pollfds, it);
             }
             else
             {
@@ -620,25 +650,33 @@ int main(int argc, char *argv[])
         while (clients.size() > MAXSERVERS + 1)
         {
             // Remove a random server from the list until we have 8 servers
-            cout << "removing a random client" << endl;
+            std::cout << "removing a random client" << std::endl;
             Client *randomClient = getRandomClient();
-            closeClient(randomClient->sock, pollfds);
+            if (randomClient != nullptr)
+            {
+                auto it = clients.find(randomClient->sock);
+                if (it != clients.end())
+                {
+                    removeClient(clients, pollfds, it);
+                }
+            }
         }
 
         // Send keepalive messages periodically
         if (difftime(currentTime, lastKeepaliveTime) >= keepaliveInterval)
         {
-            cout << "|| INFO || Sending keepalive messages" << endl;
+            std::cout << "|| INFO || Sending keepalive messages" << std::endl;
             for (auto &client : clients)
             {
                 sendKeepalive(*client.second, messageMap[client.second->name]);
+                sleep(0.5);
             }
             lastKeepaliveTime = currentTime;
         }
     }
 
     // Clean up and close all connections
-    cout << "Closing all connections" << endl;
+    std::cout << "Closing all connections" << std::endl;
     for (auto &client : clients)
     {
         close(client.first);
