@@ -79,21 +79,21 @@ void logMessage(const string &msg, string filename, bool printToConsole)
 // get the source ip address and port from a socket
 pair<string, int> getSourceIpandPort(int sockfd)
 {
-    if (sockfd < 0)
-    {
-        return make_pair("", -1);
-    }
+    struct sockaddr_in client_addr;
+    socklen_t addr_len = sizeof(client_addr);
 
-    // Get and print the local address and port
-    struct sockaddr_in socket_addr;
-    socklen_t addr_len = sizeof(socket_addr);
-    if (getsockname(sockfd, (struct sockaddr *)&socket_addr, &addr_len) == 0)
+    // Use getpeername to get the client's IP and port
+    if (getpeername(sockfd, (struct sockaddr *)&client_addr, &addr_len) == 0)
     {
-        return make_pair(inet_ntoa(socket_addr.sin_addr), ntohs(socket_addr.sin_port));
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(client_addr.sin_addr), client_ip, INET_ADDRSTRLEN);
+        int client_port = ntohs(client_addr.sin_port);
+        return {std::string(client_ip), client_port};
     }
     else
     {
-        return make_pair("", -1);
+        // Return empty values if there's an error
+        return {"", -1};
     }
 }
 
@@ -161,7 +161,8 @@ int open_socket(int portno, string ip)
         perror("Failed to open socket");
         return -1;
     }
-
+    int opt = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     memset(&server_addr, 0, sizeof(server_addr));
 
     server_addr.sin_family = AF_INET;
