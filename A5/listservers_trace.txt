@@ -1,0 +1,124 @@
+No.     Time           Source                Destination           Protocol Length Info
+      1 0.000000000    172.30.249.108        130.208.246.249       TCP      74     33692 → 4042 [SYN] Seq=0 Win=64240 Len=0 MSS=1460 SACK_PERM=1 TSval=4073432571 TSecr=0 WS=128
+
+Frame 1: 74 bytes on wire (592 bits), 74 bytes captured (592 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_04:6f:f4 (00:15:5d:04:6f:f4), Dst: Microsof_9b:98:c8 (00:15:5d:9b:98:c8)
+Internet Protocol Version 4, Src: 172.30.249.108, Dst: 130.208.246.249
+Transmission Control Protocol, Src Port: 33692, Dst Port: 4042, Seq: 0, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+      2 0.003894097    130.208.246.249       172.30.249.108        TCP      74     4042 → 33692 [SYN, ACK] Seq=0 Ack=1 Win=65160 Len=0 MSS=1250 SACK_PERM=1 TSval=820084968 TSecr=4073432571 WS=128
+
+Frame 2: 74 bytes on wire (592 bits), 74 bytes captured (592 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_9b:98:c8 (00:15:5d:9b:98:c8), Dst: Microsof_04:6f:f4 (00:15:5d:04:6f:f4)
+Internet Protocol Version 4, Src: 130.208.246.249, Dst: 172.30.249.108
+Transmission Control Protocol, Src Port: 4042, Dst Port: 33692, Seq: 0, Ack: 1, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+      3 0.003932281    172.30.249.108        130.208.246.249       TCP      66     33692 → 4042 [ACK] Seq=1 Ack=1 Win=64256 Len=0 TSval=4073432575 TSecr=820084968
+
+Frame 3: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_04:6f:f4 (00:15:5d:04:6f:f4), Dst: Microsof_9b:98:c8 (00:15:5d:9b:98:c8)
+Internet Protocol Version 4, Src: 172.30.249.108, Dst: 130.208.246.249
+Transmission Control Protocol, Src Port: 33692, Dst Port: 4042, Seq: 1, Ack: 1, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+      4 0.004077931    172.30.249.108        130.208.246.249       TCP      79     33692 → 4042 [PSH, ACK] Seq=1 Ack=1 Win=64256 Len=13 TSval=4073432575 TSecr=820084968
+
+Frame 4: 79 bytes on wire (632 bits), 79 bytes captured (632 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_04:6f:f4 (00:15:5d:04:6f:f4), Dst: Microsof_9b:98:c8 (00:15:5d:9b:98:c8)
+Internet Protocol Version 4, Src: 172.30.249.108, Dst: 130.208.246.249
+Transmission Control Protocol, Src Port: 33692, Dst Port: 4042, Seq: 1, Ack: 1, Len: 13
+Data (13 bytes)
+
+0000  01 52 61 74 74 61 74 6f 73 6b 75 72 04            .Rattatoskur.
+
+No.     Time           Source                Destination           Protocol Length Info
+      5 0.006390500    130.208.246.249       172.30.249.108        TCP      66     4042 → 33692 [ACK] Seq=1 Ack=14 Win=65152 Len=0 TSval=820084971 TSecr=4073432575
+
+Frame 5: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_9b:98:c8 (00:15:5d:9b:98:c8), Dst: Microsof_04:6f:f4 (00:15:5d:04:6f:f4)
+Internet Protocol Version 4, Src: 130.208.246.249, Dst: 172.30.249.108
+Transmission Control Protocol, Src Port: 4042, Dst Port: 33692, Seq: 1, Ack: 14, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+      6 0.006390730    130.208.246.249       172.30.249.108        TCP      97     4042 → 33692 [PSH, ACK] Seq=1 Ack=14 Win=65152 Len=31 TSval=820084971 TSecr=4073432575
+
+Frame 6: 97 bytes on wire (776 bits), 97 bytes captured (776 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_9b:98:c8 (00:15:5d:9b:98:c8), Dst: Microsof_04:6f:f4 (00:15:5d:04:6f:f4)
+Internet Protocol Version 4, Src: 130.208.246.249, Dst: 172.30.249.108
+Transmission Control Protocol, Src Port: 4042, Dst Port: 33692, Seq: 1, Ack: 14, Len: 31
+Data (31 bytes)
+
+0000  4d 61 69 6e 20 43 6c 69 65 6e 74 20 63 6f 6e 6e   Main Client conn
+0010  65 63 74 65 64 20 74 6f 20 53 65 72 76 65 72      ected to Server
+
+No.     Time           Source                Destination           Protocol Length Info
+      7 0.006408425    172.30.249.108        130.208.246.249       TCP      66     33692 → 4042 [ACK] Seq=14 Ack=32 Win=64256 Len=0 TSval=4073432577 TSecr=820084971
+
+Frame 7: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_04:6f:f4 (00:15:5d:04:6f:f4), Dst: Microsof_9b:98:c8 (00:15:5d:9b:98:c8)
+Internet Protocol Version 4, Src: 172.30.249.108, Dst: 130.208.246.249
+Transmission Control Protocol, Src Port: 33692, Dst Port: 4042, Seq: 14, Ack: 32, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+      8 4.987115347    172.30.249.108        130.208.246.249       TCP      79     33692 → 4042 [PSH, ACK] Seq=14 Ack=32 Win=64256 Len=13 TSval=4073437558 TSecr=820084971
+
+Frame 8: 79 bytes on wire (632 bits), 79 bytes captured (632 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_04:6f:f4 (00:15:5d:04:6f:f4), Dst: Microsof_9b:98:c8 (00:15:5d:9b:98:c8)
+Internet Protocol Version 4, Src: 172.30.249.108, Dst: 130.208.246.249
+Transmission Control Protocol, Src Port: 33692, Dst Port: 4042, Seq: 14, Ack: 32, Len: 13
+Data (13 bytes)
+
+0000  01 4c 49 53 54 53 45 52 56 45 52 53 04            .LISTSERVERS.
+
+No.     Time           Source                Destination           Protocol Length Info
+      9 4.991671877    130.208.246.249       172.30.249.108        TCP      332    4042 → 33692 [PSH, ACK] Seq=32 Ack=27 Win=65152 Len=266 TSval=820089955 TSecr=4073437558
+
+Frame 9: 332 bytes on wire (2656 bits), 332 bytes captured (2656 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_9b:98:c8 (00:15:5d:9b:98:c8), Dst: Microsof_04:6f:f4 (00:15:5d:04:6f:f4)
+Internet Protocol Version 4, Src: 130.208.246.249, Dst: 172.30.249.108
+Transmission Control Protocol, Src Port: 4042, Dst Port: 33692, Seq: 32, Ack: 27, Len: 266
+Data (266 bytes)
+
+0000  4c 69 73 74 69 6e 67 20 61 6c 6c 20 73 65 72 76   Listing all serv
+0010  65 72 73 20 77 65 20 61 72 65 20 63 6f 6e 6e 65   ers we are conne
+0020  63 74 65 64 20 74 6f 3a 20 49 6e 73 74 72 5f 31   cted to: Instr_1
+0030  20 61 74 20 31 33 30 2e 32 30 38 2e 32 34 36 2e    at 130.208.246.
+0040  32 34 39 20 3a 20 35 30 30 31 2c 20 41 35 5f 31   249 : 5001, A5_1
+0050  36 39 20 61 74 20 31 33 30 2e 32 30 38 2e 32 34   69 at 130.208.24
+0060  36 2e 32 34 39 20 3a 20 34 31 37 30 2c 20 41 35   6.249 : 4170, A5
+0070  5f 36 39 20 61 74 20 31 33 30 2e 32 30 38 2e 32   _69 at 130.208.2
+0080  34 36 2e 32 34 39 20 3a 20 34 30 36 39 2c 20 49   46.249 : 4069, I
+0090  6e 73 74 72 5f 32 20 61 74 20 31 33 30 2e 32 30   nstr_2 at 130.20
+00a0  38 2e 32 34 36 2e 32 34 39 20 3a 20 35 30 30 32   8.246.249 : 5002
+00b0  2c 20 20 61 74 20 31 33 30 2e 32 30 38 2e 32 34   ,  at 130.208.24
+00c0  36 2e 32 34 39 20 3a 20 34 30 36 38 2c 20 20 61   6.249 : 4068,  a
+00d0  74 20 31 33 30 2e 32 30 38 2e 32 34 36 2e 32 34   t 130.208.246.24
+00e0  39 20 3a 20 34 30 33 34 2c 20 41 35 5f 33 20 61   9 : 4034, A5_3 a
+00f0  74 20 31 33 30 2e 32 30 38 2e 32 34 36 2e 32 34   t 130.208.246.24
+0100  39 20 3a 20 34 30 30 33 2c 20                     9 : 4003, 
+
+No.     Time           Source                Destination           Protocol Length Info
+     10 4.991693780    172.30.249.108        130.208.246.249       TCP      66     33692 → 4042 [ACK] Seq=27 Ack=298 Win=64128 Len=0 TSval=4073437563 TSecr=820089955
+
+Frame 10: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_04:6f:f4 (00:15:5d:04:6f:f4), Dst: Microsof_9b:98:c8 (00:15:5d:9b:98:c8)
+Internet Protocol Version 4, Src: 172.30.249.108, Dst: 130.208.246.249
+Transmission Control Protocol, Src Port: 33692, Dst Port: 4042, Seq: 27, Ack: 298, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+     11 9.115058717    172.30.249.108        130.208.246.249       TCP      66     33692 → 4042 [FIN, ACK] Seq=27 Ack=298 Win=64128 Len=0 TSval=4073441686 TSecr=820089955
+
+Frame 11: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_04:6f:f4 (00:15:5d:04:6f:f4), Dst: Microsof_9b:98:c8 (00:15:5d:9b:98:c8)
+Internet Protocol Version 4, Src: 172.30.249.108, Dst: 130.208.246.249
+Transmission Control Protocol, Src Port: 33692, Dst Port: 4042, Seq: 27, Ack: 298, Len: 0
+
+No.     Time           Source                Destination           Protocol Length Info
+     12 9.170372633    130.208.246.249       172.30.249.108        TCP      66     4042 → 33692 [ACK] Seq=298 Ack=28 Win=65152 Len=0 TSval=820094135 TSecr=4073441686
+
+Frame 12: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface eth0, id 0
+Ethernet II, Src: Microsof_9b:98:c8 (00:15:5d:9b:98:c8), Dst: Microsof_04:6f:f4 (00:15:5d:04:6f:f4)
+Internet Protocol Version 4, Src: 130.208.246.249, Dst: 172.30.249.108
+Transmission Control Protocol, Src Port: 4042, Dst Port: 33692, Seq: 298, Ack: 28, Len: 0

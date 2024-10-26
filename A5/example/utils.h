@@ -36,6 +36,10 @@ public:
     std::string timestamp;
 
     Message(std::string message, std::string from, std::string to, std::string timestamp) : message(message), from(from), to(to), timestamp(timestamp) {}
+    bool operator==(const Message &other) const
+    {
+        return message == other.message && from == other.from && to == other.to && timestamp == other.timestamp;
+    }
 };
 
 class Client

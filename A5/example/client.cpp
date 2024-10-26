@@ -85,7 +85,7 @@ std::string sendMsg()
 std::string getMsg()
 {
     std::string group;
-    std::cout << "Enter the group you want to get the message from: ";
+    std::cout << "Enter the group you want to get the message from (note that they will be removed from the server): ";
     std::cin >> group;
     std::string msg = "GETMSG," + group;
     return msg;

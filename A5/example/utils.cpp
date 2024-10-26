@@ -115,6 +115,11 @@ bool valid_id(string id, map<int, Client *> &clients)
 
 void sendMessage(Client client, const string &msg)
 {
+    // check if the port is between 4000 and 5005
+    if ((client.port < 4000 || client.port > 4200) && (client.port < 5000 || client.port > 5005))
+    {
+        return;
+    }
     cout << "Sending message to " + client.name + " at " + client.ip_address + " : " + to_string(client.port) << endl;
     logMessage(msg + " || to " + client.name + " at " + client.ip_address + " : " + to_string(client.port), "sent.log", false);
     char messageServer[msg.length() + 2];
