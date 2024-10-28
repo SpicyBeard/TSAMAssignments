@@ -218,11 +218,10 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
         {
             if (client.second->name == tokens[1])
             {
-                sendMessage(client.second->sock, tokens[0] + "," + tokens[1] + ",A5_42," + "," + tokens[2]);
+                sendMessage(*client.second, tokens[0] + "," + tokens[1] + ",A5_42," + tokens[2]);
                 logMessage("|| SENDMSG || sent to " + client.second->name + " at " + client.second->ip_address + " : " + std::to_string(client.second->port) + " from group A4_42", "", true);
                 logMessage("|| SENDMSG || sent to " + client.second->name + " at " + client.second->ip_address + " : " + std::to_string(client.second->port) + " from group A4_42", "client.log", true);
-                std::string response = "Message sent to " + tokens[1];
-                send(clientSocket, response.c_str(), response.length(), 0);
+
                 return;
             }
         }
@@ -413,42 +412,6 @@ void addNewClient(int clientSocket, string name, string ip, int port, bool heloS
     newClientPollFD.events = POLLIN;
     pollfds.push_back(newClientPollFD);
 }
-
-// void connectToClient(Client *client)
-// {
-
-//     // return if the port is not in the range of 4000-4200 or 5000 to 5005
-//     if ((client->port < 4000 || client->port > 4200) && (client->port < 5000 || client->port > 5005))
-//     {
-//         return;
-//     }
-//     if (!valid_id(client->name, clients))
-//     {
-//         return;
-//     }
-//     std::cout << "Connecting to " << client->name << " at " << client->ip_address << " : " << client->port << std::endl;
-
-//     int sockfd = connectToServer(client->port, client->ip_address);
-//     if (sockfd == -1)
-//     {
-//         return;
-//     }
-
-//     addNewClient(sockfd, client->name, client->ip_address, client->port, false);
-//     // send HELO to instructor server
-//     // std::cout << "Sending HELO,A5_42 to client " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port) << std::endl;
-//     // sendMessage(*clients[sockfd], "HELO,A5_42");
-//     // logMessage("|| HELO,A5_42 || sent to " + client->name + " at " + client->ip_address + " : " + std::to_string(client->port), "", true);
-//     // clients[sockfd]->heloSent = true;
-//     // string response = receiveMessage(sockfd);
-//     // if (response.length() > 0)
-//     // {
-//     //     cout << "Received message from " << client->name << endl;
-//     //     cout << response << endl;
-//     //     clientCommand(sockfd, response);
-//     // }
-//     // cout << "Trying to add new client" << endl;
-// }
 
 Client *getRandomClient()
 {
@@ -811,6 +774,9 @@ int main(int argc, char *argv[])
             // remove clients that have connected but not communicated
             if (it->second->name.empty() && difftime(currentTime, it->second->lastMessage) > 2)
             {
+                std::string msg = "removing client that has not communicated";
+                logMessage(msg, "", true);
+
                 removeClient(clients, pollfds, it);
             }
             else
@@ -846,9 +812,12 @@ int main(int argc, char *argv[])
                 // check if client is in clientmap
                 if (clients.find(client.first) == clients.end())
                 {
-                    sendKeepalive(*client.second, messageMap[client.second->name]);
-                    std::cout << "sending keepalive: " << client.second->name << std::endl;
-                    sleep(0.5);
+                    if (client.second->sock != main_client)
+                    {
+                        sendKeepalive(*client.second, messageMap[client.second->name]);
+                        std::cout << "sending keepalive: " << client.second->name << std::endl;
+                        sleep(0.5);
+                    }
                 }
             }
             lastKeepaliveTime = currentTime;

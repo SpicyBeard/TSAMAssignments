@@ -98,7 +98,9 @@ std::string sendMsg()
     std::cout << "Enter the user you want to send the message to: ";
     std::cin >> to;
     std::cout << "Enter the message you want to send: ";
-    std::cin >> message;
+    // get all input including spaces
+    std::cin.ignore();
+    std::getline(std::cin, message);
     std::string msg = "SENDMSG," + to + "," + message;
     return msg;
 }
