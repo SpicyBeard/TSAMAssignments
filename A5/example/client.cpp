@@ -78,7 +78,7 @@ std::string connectServer()
     std::string group;
     std::cout << "Enter the name of the group you want to connect to: ";
     std::cin >> group;
-    group = group + ",";
+    group = group;
     std::cout << "Enter the ip address of the server you want to connect to: ";
     std::string ip;
     std::cin >> ip;
@@ -86,7 +86,7 @@ std::string connectServer()
     std::cout << "Enter the port number of the server you want to connect to: ";
     std::string port;
     std::cin >> port;
-    group = group + port;
+    group = group + "," + port;
     std::string msg = "CONNECT," + group;
     return msg;
 }

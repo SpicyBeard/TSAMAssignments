@@ -137,33 +137,35 @@ void handleHeloCommand(int clientSocket, const std::vector<std::string> &tokens)
 
 void handleServersCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
-    if (tokens.size() >= 2)
+    if (tokens[1] != "A5_22")
     {
-        clients[clientSocket]->lastMessage = time(0);
 
-        logMessage("|| SERVERS || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
-        // check if the first server matches the current one
-        // if (clients[clientSocket]->name == "A5_74")
-        // {
-        //     return;
-        // }
-        if (clients[clientSocket]->name != tokens[1])
+        if (tokens.size() >= 2)
         {
-            logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + "\n\tServer did not send themselves as the first server", "", true);
-            clients[clientSocket]->misbehaveCounter++;
-            return;
-        }
-        clients[clientSocket]->servers.clear();
-        clients[clientSocket]->ip_address = tokens[2];
-        clients[clientSocket]->port = std::stoi(tokens[3]);
-        for (size_t i = 4; i < tokens.size(); i += 3)
-        {
+            clients[clientSocket]->lastMessage = time(0);
 
-            Client *server = new Client(-1);
-            server->name = tokens[i];
-            server->ip_address = tokens[i + 1];
-            server->port = std::stoi(tokens[i + 2]);
-            clients[clientSocket]->servers.push_back(server);
+            logMessage("|| SERVERS || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
+
+            if (clients[clientSocket]->name != tokens[1])
+            {
+                logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + "\n\tServer did not send themselves as the first server", "", true);
+                clients[clientSocket]->misbehaveCounter++;
+                return;
+            }
+
+            clients[clientSocket]->servers.clear();
+            clients[clientSocket]->ip_address = tokens[2];
+            clients[clientSocket]->port = std::stoi(tokens[3]);
+
+            for (size_t i = 4; i < tokens.size(); i += 3)
+            {
+
+                Client *server = new Client(-1);
+                server->name = tokens[i];
+                server->ip_address = tokens[i + 1];
+                server->port = std::stoi(tokens[i + 2]);
+                clients[clientSocket]->servers.push_back(server);
+            }
         }
     }
     clients[clientSocket]->misbehaveCounter += 1;
@@ -238,12 +240,21 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
         }
         return;
     }
-    else if (tokens.size() == 4 && connectedClient(clientSocket, clients))
+    else if (tokens.size() >= 4 && connectedClient(clientSocket, clients))
     {
-
+        std::string receivedMsg = tokens[3];
+        if (tokens.size() > 4)
+        {
+            for (size_t i = 4; i < tokens.size(); i++)
+            {
+                receivedMsg += "," + tokens[i];
+            }
+            std::vector<std::string> newTokens = tokens;
+            newTokens[3] = receivedMsg;
+        }
         if (tokens[1] == "A5_42")
         {
-            logMessage("Received message from " + tokens[2] + " Message Content: " + tokens[3], "messages.log", true);
+            logMessage("Received message from " + tokens[2] + " Message Content: " + receivedMsg, "messages.log", true);
         }
 
         logMessage("|| SENDMSG || received from " + clients[clientSocket]->name + " TO " + tokens[1] + " originally FROM " + tokens[2], "", true);
@@ -254,7 +265,7 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
         {
             if (client.second->name == tokens[1] && client.second->name != "A5_42")
             {
-                sendMessage(client.second->sock, tokens[0] + "," + tokens[1] + "," + tokens[2] + "," + tokens[3]);
+                sendMessage(client.second->sock, tokens[0] + "," + tokens[1] + "," + tokens[2] + "," + receivedMsg);
                 logMessage("|| SENDMSG || sent to " + tokens[1] + " at " + client.second->ip_address + " : " + std::to_string(client.second->port) + " from group " + tokens[2], "", true);
                 return;
             }
@@ -839,7 +850,7 @@ int main(int argc, char *argv[])
                     std::cout << "sending keepalive: " << client.second->name << std::endl;
                     sleep(0.5);
                 }
-                        }
+            }
             lastKeepaliveTime = currentTime;
         }
     }
