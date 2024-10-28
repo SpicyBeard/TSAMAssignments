@@ -792,13 +792,13 @@ int main(int argc, char *argv[])
         for (auto it = clients.begin(); it != clients.end();)
         {
             // make sure not to remove the main client
-            if (it->second == clients[main_client])
+            if (it->second->sock == main_client)
             {
                 ++it;
                 continue;
             }
             // remove clients that have connected but not communicated
-            if (it->second->name.empty() && difftime(currentTime, it->second->lastMessage) > 3)
+            if (it->second->name.empty() && difftime(currentTime, it->second->lastMessage) > 2)
             {
                 removeClient(clients, pollfds, it);
             }
@@ -832,10 +832,14 @@ int main(int argc, char *argv[])
             std::cout << "|| INFO || Sending keepalive messages" << std::endl;
             for (auto &client : clients)
             {
-                sendKeepalive(*client.second, messageMap[client.second->name]);
-                std::cout << "sending keepalive: " << client.second->name << std::endl;
-                sleep(0.5);
-            }
+                // check if client is in clientmap
+                if (clients.find(client.first) == clients.end())
+                {
+                    sendKeepalive(*client.second, messageMap[client.second->name]);
+                    std::cout << "sending keepalive: " << client.second->name << std::endl;
+                    sleep(0.5);
+                }
+                        }
             lastKeepaliveTime = currentTime;
         }
     }
