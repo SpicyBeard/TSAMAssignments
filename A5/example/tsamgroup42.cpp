@@ -27,21 +27,20 @@
 #include <sstream>
 #include <thread>
 #include <map>
-#include <poll.h> // Add this for poll()
+#include <poll.h>
 #include <random>
 #include <unistd.h>
 #include "utils.h"
 
-// fix SOCK_NONBLOCK for OSX
 #ifndef SOCK_NONBLOCK
 #include <fcntl.h>
 #define SOCK_NONBLOCK O_NONBLOCK
 #endif
 
-#define BACKLOG 5 // Allowed length of queue of waiting connections
-#define MAXSERVERS 8
-#define MINSERVERS 3
-#define MAXMISBEHAVIOUR 5
+#define BACKLOG 5         // Allowed length of queue of waiting connections
+#define MAXSERVERS 8      // Maximum number of servers
+#define MINSERVERS 3      // Minimum number of servers
+#define MAXMISBEHAVIOUR 5 // Maximum number of misbehaviours
 
 std::map<int, Client *> clients;    // Lookup table for per Client information
 int main_client = -1;               // Main client socket
@@ -49,6 +48,7 @@ std::vector<Message> messageVector; // List of messages
 std::map<string, int> messageMap;   // Map of messages
 std::vector<struct pollfd> pollfds; // vector of pollfd instead
 
+// Closes the client socket and removes it from the pollfds vector
 void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
 {
     // Close the client socket
@@ -63,6 +63,7 @@ void closeClient(int clientSocket, std::vector<struct pollfd> &pollfds)
     pollfds.erase(it, pollfds.end());
 }
 
+// Removes a client from the clients map and pollfds vector
 void removeClient(std::map<int, Client *> &clients, std::vector<struct pollfd> &pollfds, std::map<int, Client *>::iterator &it)
 {
     // Check if the socket is in pollfds and is open
@@ -87,11 +88,13 @@ void removeClient(std::map<int, Client *> &clients, std::vector<struct pollfd> &
     it = clients.erase(it);
 }
 
+// Removes the main client from the clients map and pollfds vector
 std::vector<std::vector<std::string>> processTokens(char *buffer)
 {
     return checkMessageContentAndProcess(buffer);
 }
 
+// Handles connecting the main client(user) to the server
 void handleRattatoskurCommand(int clientSocket)
 {
     std::string msg = "Main Client connected to Server";
@@ -100,9 +103,10 @@ void handleRattatoskurCommand(int clientSocket)
     main_client = clientSocket;
 }
 
+// Handles the HELO command from the client
 void handleHeloCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
-    if (tokens.size() == 2 && valid_id(tokens[1], clients))
+    if (tokens.size() == 2 && isValidId(tokens[1], clients))
     {
         if (tokens[1] == "A5_300")
         {
@@ -135,42 +139,42 @@ void handleHeloCommand(int clientSocket, const std::vector<std::string> &tokens)
     }
 }
 
+// Handles the SERVERS command from the client
 void handleServersCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
-    if (tokens[1] != "A5_22")
+
+    if (tokens.size() >= 2)
     {
+        clients[clientSocket]->lastMessage = time(0);
 
-        if (tokens.size() >= 2)
+        logMessage("|| SERVERS || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
+
+        if (clients[clientSocket]->name != tokens[1])
         {
-            clients[clientSocket]->lastMessage = time(0);
+            logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + "\n\tServer did not send themselves as the first server", "", true);
+            clients[clientSocket]->misbehaveCounter++;
+            return;
+        }
 
-            logMessage("|| SERVERS || received from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "", true);
+        clients[clientSocket]->servers.clear();
+        clients[clientSocket]->ip_address = tokens[2];
+        clients[clientSocket]->port = std::stoi(tokens[3]);
 
-            if (clients[clientSocket]->name != tokens[1])
-            {
-                logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + "\n\tServer did not send themselves as the first server", "", true);
-                clients[clientSocket]->misbehaveCounter++;
-                return;
-            }
+        for (size_t i = 4; i < tokens.size(); i += 3)
+        {
 
-            clients[clientSocket]->servers.clear();
-            clients[clientSocket]->ip_address = tokens[2];
-            clients[clientSocket]->port = std::stoi(tokens[3]);
-
-            for (size_t i = 4; i < tokens.size(); i += 3)
-            {
-
-                Client *server = new Client(-1);
-                server->name = tokens[i];
-                server->ip_address = tokens[i + 1];
-                server->port = std::stoi(tokens[i + 2]);
-                clients[clientSocket]->servers.push_back(server);
-            }
+            Client *server = new Client(-1);
+            server->name = tokens[i];
+            server->ip_address = tokens[i + 1];
+            server->port = std::stoi(tokens[i + 2]);
+            clients[clientSocket]->servers.push_back(server);
         }
     }
+
     clients[clientSocket]->misbehaveCounter += 1;
 }
 
+// handles the KEEPALIVE command
 void handleKeepAliveCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
     if (tokens.size() == 2)
@@ -187,6 +191,7 @@ void handleKeepAliveCommand(int clientSocket, const std::vector<std::string> &to
     }
 }
 
+// handles the LISTSERVERS command from main client
 void handleListServersCommand(int clientSocket)
 {
     std::string msg = "Listing all servers we are connected to: ";
@@ -201,6 +206,7 @@ void handleListServersCommand(int clientSocket)
     send(clientSocket, msg.c_str(), msg.length(), 0);
 }
 
+// handles the SENDMSG command from main client or other clients
 void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
     if (tokens.size() == 3 && clientSocket == main_client)
@@ -401,7 +407,7 @@ void removeClientFromPoll(int clientSocket)
 void addNewClient(int clientSocket, string name, string ip, int port, bool heloSent)
 {
     // Create a new client entry in the clients map and add to pollfds
-    std::cout << "|| CONNECTING || conencting to new client: " + name + " at " + ip + " : " + std::to_string(port) << std::endl;
+    logMessage("|| CONNECTING || connecting to new client: " + name + " at " + ip + " : " + std::to_string(port), "", true);
     clients[clientSocket] = new Client(clientSocket);
     clients[clientSocket]->ip_address = ip;
     clients[clientSocket]->port = port;
@@ -413,6 +419,7 @@ void addNewClient(int clientSocket, string name, string ip, int port, bool heloS
     pollfds.push_back(newClientPollFD);
 }
 
+// get a random client that is not the main client
 Client *getRandomClient()
 {
     if (clients.empty())
@@ -424,7 +431,7 @@ Client *getRandomClient()
     std::vector<Client *> filteredClients;
     for (const auto &pair : clients)
     {
-        if (pair.second->name != "Main Client")
+        if (pair.second->sock != main_client)
         {
             filteredClients.push_back(pair.second);
         }
@@ -446,6 +453,7 @@ Client *getRandomClient()
     return filteredClients[randomIndex];
 }
 
+// Handles a new connection from a client
 void handleNewConnection(int clientSock, struct sockaddr_in &client)
 {
     // Get the client's IP address and port
@@ -467,6 +475,7 @@ void handleNewConnection(int clientSock, struct sockaddr_in &client)
     std::cout << "Added new client: " << clients[clientSock]->name << " at " << clients[clientSock]->ip_address << " : " << clients[clientSock]->port << std::endl;
 }
 
+// Handles a new connection from the main client
 void handleDirectConnection(std::string name, std::string ip, int port)
 {
     int sockfd = connectToServer(port, ip);
@@ -483,6 +492,7 @@ void handleDirectConnection(std::string name, std::string ip, int port)
     clients[sockfd]->heloSent = true;
 }
 
+// Dispatches the command to the appropriate handler
 void dispatchCommand(int clientSocket, const std::vector<std::string> &tokens)
 {
     if (tokens[0] == "Rattatoskur")
@@ -536,6 +546,7 @@ void dispatchCommand(int clientSocket, const std::vector<std::string> &tokens)
     }
 }
 
+// Reviews the validity of the command and logs it and sends it to dispatch
 void clientCommand(int clientSocket, std::string buffer)
 {
     handleInvalidCommand(clientSocket, buffer);
@@ -549,6 +560,7 @@ void clientCommand(int clientSocket, std::string buffer)
     }
 }
 
+// Connects to a client with the given IP address and port
 void connectToClient(Client *client)
 {
     // Return if the port is not in the range of 4000-4200 or 5000 to 5005
@@ -556,7 +568,7 @@ void connectToClient(Client *client)
     {
         return;
     }
-    if (!valid_id(client->name, clients))
+    if (!isValidId(client->name, clients))
     {
         return;
     }
@@ -627,7 +639,7 @@ int main(int argc, char *argv[])
     }
 
     // Setup socket for server to listen to
-    listenSock = open_socket(atoi(argv[1]), "130.208.246.249");
+    listenSock = openSocket(atoi(argv[1]), "130.208.246.249");
 
     if (listen(listenSock, BACKLOG) < 0)
     {
@@ -639,11 +651,9 @@ int main(int argc, char *argv[])
         printf("Listening on port: %d\n", atoi(argv[1]));
     }
 
+    // added newline for better readability
     logMessage("", "", false);
-    logMessage("", "recieved.log", false);
-    logMessage("", "sent.log", false);
     logMessage("", "messages.log", false);
-    logMessage("", "client.log", false);
     // Add listening socket to the pollfds vector
     struct pollfd listenPollFD;
     listenPollFD.fd = listenSock;
@@ -669,7 +679,7 @@ int main(int argc, char *argv[])
                     firstSock = connectToServer(5001, "130.208.246.249");
                     if (firstSock == -1)
                     {
-                        std::cout << "Failed to connect to Instr_1, retrying in 1 second" << std::endl;
+                        logMessage("Failed to connect to Instr_1, retrying in 1 second", "", true);
                         sleep(10); // Wait for 1 second before retrying
                     }
                 }
@@ -719,7 +729,6 @@ int main(int argc, char *argv[])
                     clientLen = sizeof(client);
                     if ((clientSock = accept(listenSock, (struct sockaddr *)&client, &clientLen)) >= 0)
                     {
-                        // TODO: sometimes this is causing a segfault
                         handleNewConnection(clientSock, client);
                     }
                 }
@@ -774,8 +783,7 @@ int main(int argc, char *argv[])
             // remove clients that have connected but not communicated
             if (it->second->name.empty() && difftime(currentTime, it->second->lastMessage) > 2)
             {
-                std::string msg = "removing client that has not communicated";
-                logMessage(msg, "", true);
+                logMessage("Removing non communicative servers", "", true);
 
                 removeClient(clients, pollfds, it);
             }
@@ -790,7 +798,7 @@ int main(int argc, char *argv[])
         while (clients.size() > MAXSERVERS + 1)
         {
             // Remove a random server from the list until we have 8 servers
-            std::cout << "removing a random client" << std::endl;
+            logMessage("|| INFO || Removing a random client", "", true);
             Client *randomClient = getRandomClient();
             if (randomClient != nullptr)
             {
@@ -803,7 +811,6 @@ int main(int argc, char *argv[])
         }
 
         // Send keepalive messages periodically
-        // TODO: propably need to check if the client is still connected before sending so the program does not stop
         if (difftime(currentTime, lastKeepaliveTime) >= keepaliveInterval)
         {
             std::cout << "|| INFO || Sending keepalive messages" << std::endl;
