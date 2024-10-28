@@ -1,0 +1,54 @@
+HOW TO COMPILE AND RUN
+To compile:
+    run the make command in terminal where the project is located.
+To run the server:
+    ./tsamgroup42 [port]
+    where port is the port you want to run on
+To run the client:
+    ./client [ip-address] [port]
+    where the ip and port is the ip-address and port of where the server is running
+
+additional info:
+    All code was compiled on linux, both on the TSAM server and locally on Ubuntu through WSL.
+    The server was run on the TSAM server at port 4042, which is hardcoded in the server implementation
+
+CLIENT-SERVER COMMUNICATION
+commands:
+    LISTSERVERS
+        lists all other servers our server is connected to
+    GETMSG,GROUP_ID
+        gets one message that the server is storing for GROUP_ID. The server then deletes that message. We intent for this to only be getting messages that are for our group.
+    SENDMSG,GROUP_ID,<message contents>
+        sends a message from our group to GROUP_ID. If the server know that server, it sends the 
+
+ASSIGNMENT SUPPLEMENTARY MATERIAL
+b.  wireshark trace is supplied in the client_trace.txt file and documents 
+    all the client commands between our client and server
+c.  Screenshots to confirm the connection to 2 instructor servers is in the 
+    supplied pdf, clearly marked for this question. It shows the connection
+    to Instr_1 and Instr_2, where you can see the sent and recieved HELO, 
+    SERVERS, and a KEEPALIVE from both instructor servers.
+d.  Successfully recieved messages from two groups, A5_3 and A5_69, are also
+    in the provided pdf. They show the server log for receiving the
+    messages, as well as the client getting those messages
+e.  The successfully sent messages are also in the pdf. ....
+
+
+BONUS POINTS
+a.  1 point. We handed in an implementation of our client and server in the first 
+    week of the assignment.
+e.  2 points. We have also included a text file, with a brief description
+    listing several security issues of the botnet.
+
+KNOWN ISSUES
+- segmentation faults
+- incorrect ports
+- sometimes the server stops responding
+- cannot handle messages that do not fit in a TCP packet
+
+
+- any additional files and information must be clearly named and listed stating wich of the points or bonus points you expect to get
+- how to compile and run and what OS it was compiled on
+- list commands that are implemented in the client and server and describe the behaviour of the server in response to these command and potentially other external events
+
+- list the bonus points you want to claim together with the relevant information that shows you are eligable.

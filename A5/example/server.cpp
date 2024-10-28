@@ -147,6 +147,7 @@ void handleServersCommand(int clientSocket, const std::vector<std::string> &toke
         {
             return;
         }
+        // TODO: If the client name and port are not correct in the map, it gives an error
         if (clients[clientSocket]->name != tokens[1])
         {
             logMessage("|| ERROR || " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port) + "\n\tServer did not send themselves as the first server", "", true);
@@ -238,12 +239,21 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
         }
         return;
     }
-    else if (tokens.size() == 4 && connectedClient(clientSocket, clients))
+    else if (tokens.size() >= 4 && connectedClient(clientSocket, clients))
     {
-
+        std::string receivedMsg = tokens[3];
+        if (tokens.size() > 4)
+        {
+            for (size_t i = 4; i < tokens.size(); i++)
+            {
+                receivedMsg += "," + tokens[i];
+            }
+            std::vector<std::string> newTokens = tokens;
+            newTokens[3] = receivedMsg;
+        }
         if (tokens[1] == "A5_42")
         {
-            logMessage("Received message from " + tokens[2] + " Message Content: " + tokens[3], "messages.log", true);
+            logMessage("Received message from " + tokens[2] + " Message Content: " + receivedMsg, "messages.log", true);
         }
 
         logMessage("|| SENDMSG || received from " + clients[clientSocket]->name + " TO " + tokens[1] + " originally FROM " + tokens[2], "", true);
@@ -254,7 +264,7 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
         {
             if (client.second->name == tokens[1] && client.second->name != "A5_42")
             {
-                sendMessage(client.second->sock, tokens[0] + "," + tokens[1] + "," + tokens[2] + "," + tokens[3]);
+                sendMessage(client.second->sock, tokens[0] + "," + tokens[1] + "," + tokens[2] + "," + receivedMsg);
                 logMessage("|| SENDMSG || sent to " + tokens[1] + " at " + client.second->ip_address + " : " + std::to_string(client.second->port) + " from group " + tokens[2], "", true);
                 return;
             }
@@ -644,6 +654,7 @@ int main(int argc, char *argv[])
         printf("Listening on port: %d\n", atoi(argv[1]));
     }
 
+    // TODO clean up logs, we dont need all of these different logs
     logMessage("", "", false);
     logMessage("", "recieved.log", false);
     logMessage("", "sent.log", false);
