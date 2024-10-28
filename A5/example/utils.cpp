@@ -1,5 +1,6 @@
 #include "utils.h"
 
+// Checks if the start and end of the message are correct and extracts the message content
 vector<vector<string>> checkMessageContentAndProcess(const string &input)
 {
     vector<vector<string>> commands;
@@ -15,7 +16,7 @@ vector<vector<string>> checkMessageContentAndProcess(const string &input)
             break; // No more complete messages
         }
 
-        string message = input.substr(start + 1, end - start - 1); // Extract message between 0x01 and 0x04
+        string message = input.substr(start + 1, end - start - 1);
         message.erase(0, message.find_first_not_of(" \n\r"));
         message.erase(message.find_last_not_of(" \n\r") + 1);
 
@@ -44,6 +45,7 @@ vector<vector<string>> checkMessageContentAndProcess(const string &input)
     return commands;
 }
 
+// Logs a message to a file with a timestamp and optional console output
 void logMessage(const string &msg, string filename, bool printToConsole)
 {
     time_t now = time(0);
@@ -97,7 +99,8 @@ pair<string, int> getSourceIpandPort(int sockfd)
     }
 }
 
-bool valid_id(string id, map<int, Client *> &clients)
+// Check if the id is valid, and we are not already connected to
+bool isValidId(string id, map<int, Client *> &clients)
 {
     if (id.find("A5_") != string::npos || id.find("Instr_") != string::npos)
     {
@@ -113,6 +116,7 @@ bool valid_id(string id, map<int, Client *> &clients)
     return false;
 }
 
+// Send a message to a client
 void sendMessage(Client client, const string &msg)
 {
     // check if the port is between 4000 and 5005
@@ -120,7 +124,6 @@ void sendMessage(Client client, const string &msg)
     {
         return;
     }
-    cout << "Sending message to " + client.name + " at " + client.ip_address + " : " + to_string(client.port) << endl;
     logMessage(msg + " || to " + client.name + " at " + client.ip_address + " : " + to_string(client.port), "sent.log", false);
     char messageServer[msg.length() + 2];
     bzero(messageServer, sizeof(messageServer));
@@ -130,6 +133,7 @@ void sendMessage(Client client, const string &msg)
     send(client.sock, messageServer, sizeof(messageServer), 0);
 }
 
+// Send a message to the socket
 string receiveMessage(int sockfd)
 {
     char buffer[5000];
@@ -143,6 +147,7 @@ string receiveMessage(int sockfd)
     return string(buffer, bytesReceived);
 }
 
+// Check if a client is connected
 bool connectedClient(int sock, map<int, Client *> &clients)
 {
     for (auto const &client : clients)
@@ -155,7 +160,8 @@ bool connectedClient(int sock, map<int, Client *> &clients)
     return false;
 }
 
-int open_socket(int portno, string ip)
+// Open a socket and bind it to a port
+int openSocket(int portno, string ip)
 {
     struct sockaddr_in server_addr;
     int sock;
@@ -190,7 +196,7 @@ int open_socket(int portno, string ip)
     }
 
     // Start listening on the socket for incoming connections
-    if (listen(sock, 10) < 0) // 10 is the backlog for incoming connections
+    if (listen(sock, 10) < 0)
     {
         perror("Failed to listen on socket");
         close(sock);
@@ -200,6 +206,7 @@ int open_socket(int portno, string ip)
     return sock; // Return the listening socket descriptor
 }
 
+// Connect to a server
 int connectToServer(int portno, const std::string &ip)
 {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -218,7 +225,6 @@ int connectToServer(int portno, const std::string &ip)
     fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 
     // Start the connection attempt
-    cout << "Trying to connect to " << ip << " : " << portno << endl;
     int result = connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     if (result < 0 && errno != EINPROGRESS)
     {
@@ -256,37 +262,11 @@ int connectToServer(int portno, const std::string &ip)
     // Set the socket back to blocking mode
     fcntl(sockfd, F_SETFL, flags);
 
-    cout << "Connected to server at " << ip << " : " << portno << endl;
+    logMessage("Connected to server at " + ip + " : " + to_string(portno), "sent.log", true);
     return sockfd;
 }
 
-int serverConnect(int portno, const std::string &ip)
-{
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
-    {
-        return -1;
-    }
-
-    struct sockaddr_in server_addr;
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(ip.c_str());
-    server_addr.sin_port = htons(portno);
-
-    // TODO: Getting stuck here
-    // add some sort of timeout?
-    cout << "Trying to connect to " << ip << " : " << portno << endl;
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-    {
-        perror("Socket error");
-        close(sockfd);
-        return -1;
-    }
-    logMessage("|| INFO || Connected to server at " + ip + " : " + to_string(portno), "", true);
-
-    return sockfd;
-}
-
+// Send a keepalive message to a client
 void sendKeepalive(Client client, int messages)
 {
     string keepalive = "KEEPALIVE," + to_string(messages);

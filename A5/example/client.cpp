@@ -1,42 +1,24 @@
-//
-// Simple chat client for TSAM-409
-//
-// Command line: ./chat_client 4000
-//
-
-//
-#include <stdio.h>
-#include <errno.h>
-#include <stdlib.h>
+#include <iostream>
+#include <sstream>
+#include <cstring>
+#include <thread>
+#include <ctime>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <string.h>
-#include <algorithm>
-#include <map>
-#include <vector>
-#include <thread>
-#include <ctime>
-#include <iostream>
-#include <sstream>
-#include <thread>
-#include <map>
 
-// uint8_t START = 0x01;
-// uint8_t END = 0x04;
 #define LISTSERVERS 1
 #define SENDMSG 2
 #define GETMSG 3
 #define CONNECT 4
 #define EXIT 5
 
-// Threaded function for handling responss from server
+#define PASSCODE "Rattatoskur"
 
+// listen for server messages
 void listenServer(int serverSocket)
 {
     int nread;         // Bytes read from socket
@@ -73,6 +55,7 @@ void displayMenu()
     std::cout << "5. Exit" << std::endl;
 }
 
+// get input for connecting to a server
 std::string connectServer()
 {
     std::string group;
@@ -90,7 +73,8 @@ std::string connectServer()
     std::string msg = "CONNECT," + group;
     return msg;
 }
-// get user command
+
+// get user command to send a message
 std::string sendMsg()
 {
     std::string to;
@@ -105,6 +89,7 @@ std::string sendMsg()
     return msg;
 }
 
+// get user command to get a message
 std::string getMsg()
 {
     std::string group;
@@ -119,9 +104,10 @@ std::string listServers()
     return "LISTSERVERS";
 }
 
+// send the passcode to the server to establish a connection
 void sendPasscode(int serverSocket)
 {
-    std::string passcode = "Rattatoskur";
+    std::string passcode = PASSCODE;
     // add 0x01 to the start of the message and 0x04 to the end
     char messageServer[5000];
     bzero(messageServer, sizeof(messageServer));

@@ -45,8 +45,8 @@ public:
 class Client
 {
 public:
-    int sock;         // socket of client connection
-    std::string name; // Limit length of name of client's user
+    int sock;
+    std::string name;
     std::string ip_address;
     int port;
     bool heloSent = false;
@@ -56,10 +56,10 @@ public:
 
     Client(int socket) : sock(socket) {}
 
-    ~Client() {} // Virtual destructor defined for base class
+    ~Client() {}
 };
 
-int open_socket(int portno, string ip);
+int openSocket(int portno, string ip);
 
 void sendMessage(Client client, const std::string &msg);
 
@@ -67,7 +67,7 @@ string receiveMessage(int sockfd);
 
 pair<string, int> getSourceIpandPort(int sockfd);
 
-bool valid_id(string id, map<int, Client *> &clients);
+bool isValidId(string id, map<int, Client *> &clients);
 
 vector<vector<string>> checkMessageContentAndProcess(const string &input);
 
