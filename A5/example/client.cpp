@@ -32,6 +32,8 @@
 #define LISTSERVERS 1
 #define SENDMSG 2
 #define GETMSG 3
+#define CONNECT 4
+#define EXIT 5
 
 // Threaded function for handling responss from server
 
@@ -67,7 +69,26 @@ void displayMenu()
     std::cout << "1. List Servers" << std::endl;
     std::cout << "2. Send Message" << std::endl;
     std::cout << "3. Get Message" << std::endl;
-    std::cout << "4. Exit" << std::endl;
+    std::cout << "4. Connect to Server" << std::endl;
+    std::cout << "5. Exit" << std::endl;
+}
+
+std::string connectServer()
+{
+    std::string group;
+    std::cout << "Enter the name of the group you want to connect to: ";
+    std::cin >> group;
+    group = group + ",";
+    std::cout << "Enter the ip address of the server you want to connect to: ";
+    std::string ip;
+    std::cin >> ip;
+    group = group + "," + ip;
+    std::cout << "Enter the port number of the server you want to connect to: ";
+    std::string port;
+    std::cin >> port;
+    group = group + port;
+    std::string msg = "CONNECT," + group;
+    return msg;
 }
 // get user command
 std::string sendMsg()
@@ -196,7 +217,10 @@ int main(int argc, char *argv[])
         case GETMSG:
             msg = getMsg();
             break;
-        default:
+        case CONNECT:
+            msg = connectServer();
+            break;
+        case EXIT:
             exit(0);
             break;
         }
