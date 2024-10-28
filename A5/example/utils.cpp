@@ -1,3 +1,5 @@
+// Group 42
+// dadir21@ru.is, lovisa21@ru.is
 #include "utils.h"
 
 // Checks if the start and end of the message are correct and extracts the message content

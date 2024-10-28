@@ -1,3 +1,5 @@
+// Group 42
+// dadir21@ru.is, lovisa21@ru.is
 #include <iostream>
 #include <sstream>
 #include <cstring>

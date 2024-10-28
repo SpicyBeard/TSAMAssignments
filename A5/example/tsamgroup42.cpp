@@ -1,10 +1,5 @@
-//
-// Simple chat server for TSAM-409
-//
-// Command line: ./chat_server 4000
-//
-// Author: Lovisa & Dadi -- lovisa21@ru.is  -- dadir21@ru.is
-//
+// Group 42
+// dadir21@ru.is, lovisa21@ru.is
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -97,7 +92,7 @@ std::vector<std::vector<std::string>> processTokens(char *buffer)
 // Handles connecting the main client(user) to the server
 void handleRattatoskurCommand(int clientSocket)
 {
-    std::string msg = "Main Client connected to Server";
+    std::string msg = "|| INFO || Main Client connected to Server";
     logMessage(msg, "", true);
     send(clientSocket, msg.c_str(), msg.length(), 0);
     main_client = clientSocket;
@@ -194,7 +189,7 @@ void handleKeepAliveCommand(int clientSocket, const std::vector<std::string> &to
 // handles the LISTSERVERS command from main client
 void handleListServersCommand(int clientSocket)
 {
-    std::string msg = "Listing all servers we are connected to: ";
+    std::string msg = "|| INFO || Listing all servers we are connected to: ";
     for (const auto &server : clients)
     {
         if (server.second->sock != main_client)
@@ -226,7 +221,6 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
             {
                 sendMessage(*client.second, tokens[0] + "," + tokens[1] + ",A5_42," + tokens[2]);
                 logMessage("|| SENDMSG || sent to " + client.second->name + " at " + client.second->ip_address + " : " + std::to_string(client.second->port) + " from group A4_42", "", true);
-                logMessage("|| SENDMSG || sent to " + client.second->name + " at " + client.second->ip_address + " : " + std::to_string(client.second->port) + " from group A4_42", "client.log", true);
 
                 return;
             }
@@ -259,7 +253,7 @@ void handleSendMsgCommand(int clientSocket, const std::vector<std::string> &toke
         }
         if (tokens[1] == "A5_42")
         {
-            logMessage("Received message from " + tokens[2] + " Message Content: " + receivedMsg, "messages.log", true);
+            logMessage("|| INFO || Received message from " + tokens[2] + " Message Content: " + receivedMsg, "messages.log", true);
         }
 
         logMessage("|| SENDMSG || received from " + clients[clientSocket]->name + " TO " + tokens[1] + " originally FROM " + tokens[2], "", true);
@@ -375,7 +369,6 @@ void handleGetMsgCommand(int clientSocket, const std::vector<std::string> &token
             {
                 std::string response = "SENDING messsage for " + message.to + " from " + message.from + " : " + message.message;
                 logMessage("|| SENDMSG || sent to main client from group " + message.from, "", true);
-                logMessage("|| SENDMSG || sent to main client from group " + message.from, "client.log", true);
                 send(clientSocket, response.c_str(), response.length(), 0);
                 messageVector.erase(std::remove(messageVector.begin(), messageVector.end(), message), messageVector.end());
                 return;
@@ -461,7 +454,7 @@ void handleNewConnection(int clientSock, struct sockaddr_in &client)
     inet_ntop(AF_INET, &(client.sin_addr), clientIp, INET_ADDRSTRLEN);
     int clientPort = ntohs(client.sin_port);
 
-    std::cout << "New connection accepted: " << clientSock << " from " << clientIp << ":" << clientPort << std::endl;
+    logMessage("|| INFO || New unknown connection accepted: " + std::to_string(clientSock) + " from " + clientIp + ":" + std::to_string(clientPort), "", true);
 
     // Add new client to clients map and pollfds vector
     clients[clientSock] = new Client(clientSock);
@@ -471,8 +464,6 @@ void handleNewConnection(int clientSock, struct sockaddr_in &client)
     newClientPollFD.fd = clientSock;
     newClientPollFD.events = POLLIN | POLLOUT;
     pollfds.push_back(newClientPollFD);
-
-    std::cout << "Added new client: " << clients[clientSock]->name << " at " << clients[clientSock]->ip_address << " : " << clients[clientSock]->port << std::endl;
 }
 
 // Handles a new connection from the main client
@@ -485,10 +476,7 @@ void handleDirectConnection(std::string name, std::string ip, int port)
     }
 
     addNewClient(sockfd, name, ip, port, false);
-    // send HELO to instructor server
-    std::cout << "Sending HELO,A5_42 to " << std::endl;
     sendMessage(*clients[sockfd], "HELO,A5_42");
-    logMessage("|| HELO,A5_42 || sent to " + name, "", true);
     clients[sockfd]->heloSent = true;
 }
 
@@ -550,7 +538,6 @@ void dispatchCommand(int clientSocket, const std::vector<std::string> &tokens)
 void clientCommand(int clientSocket, std::string buffer)
 {
     handleInvalidCommand(clientSocket, buffer);
-    logMessage(buffer + "|| from " + clients[clientSocket]->name + " at " + clients[clientSocket]->ip_address + " : " + std::to_string(clients[clientSocket]->port), "recieved.log", false);
 
     std::vector<std::vector<std::string>> all_tokens = checkMessageContentAndProcess(buffer);
 
@@ -572,7 +559,6 @@ void connectToClient(Client *client)
     {
         return;
     }
-    std::cout << "Connecting to " << client->name << " at " << client->ip_address << " : " << client->port << std::endl;
 
     int sockfd = connectToServer(client->port, client->ip_address);
     if (sockfd == -1)
@@ -679,7 +665,7 @@ int main(int argc, char *argv[])
                     firstSock = connectToServer(5001, "130.208.246.249");
                     if (firstSock == -1)
                     {
-                        logMessage("Failed to connect to Instr_1, retrying in 1 second", "", true);
+                        logMessage("|| ERROR || Failed to connect to Instr_1, retrying in 1 second", "", true);
                         sleep(10); // Wait for 1 second before retrying
                     }
                 }
@@ -783,7 +769,7 @@ int main(int argc, char *argv[])
             // remove clients that have connected but not communicated
             if (it->second->name.empty() && difftime(currentTime, it->second->lastMessage) > 2)
             {
-                logMessage("Removing non communicative servers", "", true);
+                logMessage("|| INFO || Removing non communicative servers", "", true);
 
                 removeClient(clients, pollfds, it);
             }
@@ -813,7 +799,6 @@ int main(int argc, char *argv[])
         // Send keepalive messages periodically
         if (difftime(currentTime, lastKeepaliveTime) >= keepaliveInterval)
         {
-            std::cout << "|| INFO || Sending keepalive messages" << std::endl;
             for (auto &client : clients)
             {
                 // check if client is in clientmap
@@ -822,7 +807,7 @@ int main(int argc, char *argv[])
                     if (client.second->sock != main_client)
                     {
                         sendKeepalive(*client.second, messageMap[client.second->name]);
-                        std::cout << "sending keepalive: " << client.second->name << std::endl;
+                        logMessage("|| KEEPALIVE || sent to " + client.second->name + " at " + client.second->ip_address + " : " + std::to_string(client.second->port), "", true);
                         sleep(0.5);
                     }
                 }
@@ -832,7 +817,7 @@ int main(int argc, char *argv[])
     }
 
     // Clean up and close all connections
-    std::cout << "Closing all connections" << std::endl;
+    logMessage("|| INFO || Closing all connections", "", true);
     for (auto &client : clients)
     {
         close(client.first);
